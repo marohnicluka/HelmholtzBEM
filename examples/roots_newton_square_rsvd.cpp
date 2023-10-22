@@ -41,7 +41,7 @@
 #include "continuous_space.hpp"
 
 #define REFINE
-//#define PARALLELIZE
+#define PARALLELIZE
 
 // define shorthand for time benchmarking tools, complex data type and immaginary unit
 using namespace std::chrono;
