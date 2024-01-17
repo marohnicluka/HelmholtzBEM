@@ -30,6 +30,7 @@ add_executable(sv_circle_arnoldi sv_circle_arnoldi.cpp)
 add_executable(sv_square_arnoldi sv_square_arnoldi.cpp)
 add_executable(debugging_SVs debugging_SVs.cpp)
 add_executable(rsvd_test rsvd_test.cpp)
+add_executable(plot_solution_square plot_solution_square.cpp)
 
 
 target_link_libraries(dirichlet_example parametrizations generate_solution solvers complex_bessel gen_sol_op)
@@ -66,3 +67,4 @@ target_link_libraries(sv_square_arnoldi parametrizations
         find_roots complex_bessel compute_SV_der compute_SV_der_arnoldi gen_sol_op blas lapack arpack)
 target_link_libraries(debugging_SVs parametrizations gen_sol_op complex_bessel)
 target_link_libraries(rsvd_test parametrizations find_roots complex_bessel compute_SV_der_arnoldi randomized_svd gen_sol_op blas lapack arpack tbb)
+target_link_libraries(plot_solution_square parametrizations complex_bessel gen_sol_op blas lapack tbb gsl)

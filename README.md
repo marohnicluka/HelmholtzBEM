@@ -686,3 +686,28 @@ The first will contain the current panel size.
 The second will contain the residual error in the euclidean norm of the computed FEM-space interpolation coefficients to the known FEM-space interpolation coefficients for the current number of panels.
 The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
+#### <tt>plot_solution_square</tt>
+
+This target builds a script that solves the
+Helmholtz transmission problem and outputs the gnuplot file.
+The scatterer is set to be a square. The results are
+written to the <tt>data</tt> directory.
+The script can be run as follows:
+~~~
+/path/to/plot_solution_square <side length of the square>
+    <refraction inside> <refraction outside> <wavenumber>
+    <#panels> <grid size> <order of quadrature rule> <angle>.
+~~~
+
+This target produces a gnuplot script which plots the solution inside
+the square. If wavenumber is not positive, the script creates a
+series of PNG images for k varying from 1.0 to 10.0. The following
+commandline produces an animation out of these images (note that it
+should be run from the <tt>data</tt> directory):
+~~~
+convert -delay 20 -loop 0 img/file_plot_solution_square_XXXX_*.png
+    output.gif
+~~~
+The user will be updated through the command line about the
+progress of the algorithm if <tt>CMDL</tt> is set.
+

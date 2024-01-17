@@ -53,8 +53,8 @@ int main() {
         return sol::fund_sol_neu(k,x1,x2,ipt[0],ipt[1]);
     };
 	// define FEM-sapces for result validation later on
-    // Inform user of started computation.
     DiscontinuousSpace<0> discont_space;
+    // Inform user of started computation.
     std::cout << "-------------------------------------------------------" << std::endl;
     std::cout << "Solving Dirichlet problem for increasing grid sizes." << std::endl;
     std::cout << "Using first-kind direct BIEs." << std::endl;

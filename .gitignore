@@ -12,6 +12,10 @@ arpackpp_lib
 data/*.dat
 data/*.txt
 data/*.m
+data/*.gif
+data/*.png
+data/*.gnuplot
+data/img/*
 data_bckp
 figures/*.pdf
 plotting_scripts/.idea

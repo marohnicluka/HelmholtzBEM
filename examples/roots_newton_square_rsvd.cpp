@@ -10,7 +10,7 @@
  * The script can be run as follows:
  *
  * <tt>
- *  /path/to/roots_brent_square_rsvd \<half side length of square\> \<refraction inside\>
+ *  /path/to/roots_newton_square_rsvd \<half side length of square\> \<refraction inside\>
  *     \<refraction outside\> \<initial wavenumber\> \<\#grid points for root search\>
  *     \<\#panels\> \<order of quadrature rule\> \<accuracy of Arnoldi algorithm\>
  *     \<number of subspace iterations\>.
@@ -34,7 +34,6 @@
 #include <string>
 #include "parametrized_line.hpp"
 //#include "singular_values_arnoldi.hpp"
-#include "find_roots.hpp"
 #include "gen_sol_op.hpp"
 #include "randsvd.hpp"
 #include "find_roots.hpp"
@@ -50,15 +49,13 @@ complex_t ii = complex_t(0,1.);
 
 int main(int argc, char** argv) {
 
-    //Eigen::setNbThreads(1);
-
     // check whether we have the correct number of input arguments
     if (argc < 10)
         throw std::runtime_error("Too few input arguments!");
     if (argc > 10)
         throw std::runtime_error("Too many input arguments!");
 
-    // define radius of circle refraction index and initial wavenumber
+    // define the side of square, refraction index and initial wavenumber
     double eps = atof(argv[1]);
     double c_i = atof(argv[2]);
     double c_o = atof(argv[3]);
@@ -72,13 +69,13 @@ int main(int argc, char** argv) {
     using PanelVector = PanelVector;
     // corner points for the square
     Eigen::RowVectorXd x1(2);
-    x1 << 0,0; // point (0,0)
+    x1 << 0, 0; // point (0,0)
     Eigen::RowVectorXd x2(2);
     x2 << eps, 0; // point (1,0)
     Eigen::RowVectorXd x3(2);
-    x3 << eps, eps; // point (1,0.5)
+    x3 << eps, eps; // point (1,1)
     Eigen::RowVectorXd x4(2);
-    x4 << 0, eps; // point (0,1.5)
+    x4 << 0, eps; // point (0,1)
     // parametrized line segments forming the edges of the polygon
     ParametrizedLine line1(x1, x2);
     ParametrizedLine line2(x2, x3);
