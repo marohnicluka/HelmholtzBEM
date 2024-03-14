@@ -54,6 +54,13 @@ namespace complex_bessel {
     } OlverData;
 
     /**
+     * This function enables/disables parallelization.
+     *
+     * @param yes yes or no (boolean)
+     */
+    void parallelize(bool yes);
+
+    /**
      * This function computes the value of the modified
      * Bessel function of the first kind.
      *

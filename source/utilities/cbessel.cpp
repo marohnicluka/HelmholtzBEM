@@ -15,6 +15,7 @@
 #include <numeric>
 #include <cmath>
 #include <iostream>
+#include <execution>
 
 #define MAXITER 10000
 //#define CBESSEL_EXCEPT 1
@@ -233,6 +234,12 @@ namespace complex_bessel {
     const invalid_argument ia_err("Undefined");
     const length_error cvg_err("Failed to converge");
 #endif
+
+    /* parallel policy */
+    bool _parallelize = false;
+    void parallelize(bool yes) {
+        _parallelize = yes;
+    }
 
     /* utilities */
     Real sign1(Real x) {
@@ -1279,55 +1286,100 @@ namespace complex_bessel {
     }
     void Bessel_JY_0(const Eigen::ArrayXXd &x,Eigen::ArrayXXd &J0,Eigen::ArrayXXd &Y0) {
         size_t nr=x.rows(),nc=x.cols();
-        Eigen::Index max_i,max_j;
-        x.maxCoeff(&max_i,&max_j);
-        Eigen::ArrayXXd x_2=x/2.0,x2_4=x_2.square(),t,log_x_2_plus_gamma=x_2.log()-D[9];
-        t.setOnes(nr,nc);
-        J0.setOnes();
-        Y0.setZero();
-        unsigned int k=1,maxiter=MAXITER;
-        double Hk=0;
-        do {
-            t*=x2_4;
-            Hk+=1.0/k;
-            t/=-k*k;
-            J0+=t;
-            Y0-=Hk*t;
-        } while (std::abs(t(max_i,max_j))>eps && k++<maxiter);
-        Y0+=log_x_2_plus_gamma*J0;
-        Y0*=M_2_PI;
+        if (x.cwiseAbs().maxCoeff() < 12.0) {
+            Eigen::Index max_i,max_j;
+            x.cwiseAbs().maxCoeff(&max_i,&max_j);
+            Eigen::ArrayXXd x_2=x/2.0,x2_4=x_2.square(),t,log_x_2_plus_gamma=x_2.log()-D[9];
+            t.setOnes(nr,nc);
+            J0.setOnes();
+            Y0.setZero();
+            unsigned int k=1,maxiter=MAXITER;
+            double Hk=0;
+            do {
+                t*=-x2_4/(k*k);
+                Hk+=1.0/k;
+                J0+=t;
+                Y0-=Hk*t;
+            } while (Hk*std::abs(t(max_i,max_j))>eps && k++<maxiter);
+            Y0+=log_x_2_plus_gamma*J0;
+            Y0*=M_2_PI;
+        } else {
+            std::vector<unsigned int> jv(nc);
+            std::iota(jv.begin(), jv.end(), 0);
+            if (_parallelize)
+                for_each(std::execution::par, jv.begin(), jv.end(), [&](unsigned int j) {
+                    for (unsigned i = 0; i < nr; ++i) {
+                        double v = x(i, j);
+                        J0(i, j) = j0(v);
+                        Y0(i, j) = y0(v);
+                    }
+                });
+            else
+                for (unsigned j = 0; j < nc; ++j) {
+                    for (unsigned i = 0; i < nr; ++i) {
+                        double v = x(i, j);
+                        J0(i, j) = j0(v);
+                        Y0(i, j) = y0(v);
+                    }
+                }
+        }
     }
     void Bessel_JY_01(const Eigen::ArrayXXd &x,Eigen::ArrayXXd &J0,Eigen::ArrayXXd &Y0,Eigen::ArrayXXd &J1,Eigen::ArrayXXd &Y1) {
         size_t nr=x.rows(),nc=x.cols();
-        Eigen::Index max_i,max_j;
-        x.maxCoeff(&max_i,&max_j);
-        Eigen::ArrayXXd x2_4=x.square()/4.0,t,log_x_2_plus_gamma=(x/2.0).log()-D[9];
-        t.setOnes(nr,nc);
-        J0.setOnes();
-        J1.setOnes();
-        Y0.setZero();
-        Y1.setZero();
-        double Hk=0,k=1.0,maxiter=MAXITER;
-        do {
-            t*=-x2_4/(k*k);
-            Hk+=1.0/k;
-            J0+=t;
-            Y0-=Hk*t;
-            k+=1.0;
-            J1+=t/k;
-            Y1-=(Hk/k)*t;
-        } while (Hk*std::abs(t(max_i,max_j))>eps && k<=maxiter);
-        J1*=x/2.0;
-        Y0+=log_x_2_plus_gamma*J0;
-        Y0*=M_2_PI;
-        Y1*=x;
-        Y1+=2.0*(log_x_2_plus_gamma*J1+(J0-2.0)/x);
-        Y1*=M_1_PI;
+        if (x.cwiseAbs().maxCoeff() <= 12.0) {
+            Eigen::Index max_i,max_j;
+            x.cwiseAbs().maxCoeff(&max_i,&max_j);
+            Eigen::ArrayXXd x2_4=x.square()/4.0,t,log_x_2_plus_gamma=(x/2.0).log()-D[9];
+            t.setOnes(nr,nc);
+            J0.setOnes();
+            J1.setOnes();
+            Y0.setZero();
+            Y1.setZero();
+            double Hk=0,k=1.0,maxiter=MAXITER;
+            do {
+                t*=-x2_4/(k*k);
+                Hk+=1.0/k;
+                J0+=t;
+                Y0-=Hk*t;
+                k+=1.0;
+                J1+=t/k;
+                Y1-=(Hk/k)*t;
+            } while (Hk*std::abs(t(max_i,max_j))>eps && k<=maxiter);
+            J1*=x/2.0;
+            Y0+=log_x_2_plus_gamma*J0;
+            Y0*=M_2_PI;
+            Y1*=x;
+            Y1+=2.0*(log_x_2_plus_gamma*J1+(J0-2.0)/x);
+            Y1*=M_1_PI;
+        } else {
+            std::vector<unsigned int> jv(nc);
+            std::iota(jv.begin(), jv.end(), 0);
+            if (_parallelize)
+                for_each(std::execution::par, jv.begin(), jv.end(), [&](unsigned int j) {
+                    for (unsigned i = 0; i < nr; ++i) {
+                        double v = x(i, j);
+                        J0(i, j) = j0(v);
+                        J1(i, j) = j1(v);
+                        Y0(i, j) = y0(v);
+                        Y1(i, j) = y1(v);
+                    }
+                });
+            else
+                for (unsigned j = 0; j < nc; ++j) {
+                    for (unsigned i = 0; i < nr; ++i) {
+                        double v = x(i, j);
+                        J0(i, j) = j0(v);
+                        J1(i, j) = j1(v);
+                        Y0(i, j) = y0(v);
+                        Y1(i, j) = y1(v);
+                    }
+                }
+        }
     }
     void H1_0(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0) {
         size_t nr=x.rows(),nc=x.cols();
-        Eigen::ArrayXXd J0(nr,nc),Y0(nr,nc),J1(nr,nc),Y1(nr,nc);
-        Bessel_JY_01(x,J0,Y0,J1,Y1);
+        Eigen::ArrayXXd J0(nr,nc),Y0(nr,nc);
+        Bessel_JY_0(x,J0,Y0);
         h0=J0+1i*Y0;
     }
     void H1_01(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0,Eigen::ArrayXXcd &h1) {

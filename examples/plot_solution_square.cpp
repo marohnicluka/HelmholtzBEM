@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     if (argc > 9)
         throw std::runtime_error("Too many input arguments!");
 
-    // define the side of square, refraction index and initial wavenumber
+    // define the side of square, refraction index and wavenumber
     double eps = atof(argv[1]);
     double c_i = atof(argv[2]);
     double c_o = atof(argv[3]);
@@ -134,18 +134,24 @@ int main(int argc, char** argv) {
     auto tic = high_resolution_clock::now();
 
     bool animate = k <= 0.0;
-    if (animate)
+    std::vector<unsigned int> ind;
+    if (animate) {
         file_script << "set term png" << std::endl;
+        ind.resize(90);
+        std::iota(ind.begin(), ind.end(), 0);
+    } else ind.push_back(0);
 
-    for (unsigned count = 0; count < (animate ? 90 : 1); ++count) {
+    for_each (std::execution::seq, ind.begin(), ind.end(), [&](unsigned int count) {
         if (animate)
             k = 1.0 + double(count) / 10.0;
 #ifdef CMDL
-        std::cout << "---> k = " << k << std::endl;
+        if (!animate)
+            std::cout << "---> k = " << k << std::endl;
 #endif
         // assemble solutions operator matrix
 #ifdef CMDL
-        std::cout << "Assembling solutions operator matrix..." << std::endl;
+        if (!animate)
+            std::cout << "Assembling solutions operator matrix..." << std::endl;
 #endif
         Eigen::MatrixXcd M, A, B, K_i, K_o, V_i, V_o, W_i, W_o;
         A.resize(2 * numpanels, 2 * numpanels);
@@ -172,7 +178,8 @@ int main(int argc, char** argv) {
 
         // create traces
 #ifdef CMDL
-        std::cout << "Computing boundary traces..." << std::endl;
+        if (!animate)
+            std::cout << "Computing boundary traces..." << std::endl;
 #endif
         Eigen::VectorXcd gamma_o_uinc, gamma_u;
         Eigen::VectorXd t;
@@ -206,7 +213,8 @@ int main(int argc, char** argv) {
 
         // interpolate traces
 #ifdef CMDL
-        std::cout << "Interpolating traces..." << std::endl;
+        if (!animate)
+            std::cout << "Interpolating traces..." << std::endl;
 #endif
         gsl_interp_accel *acc = gsl_interp_accel_alloc();
         gsl_spline *spline_D_real = gsl_spline_alloc(gsl_interp_cspline_periodic, numpanels + 1);
@@ -220,7 +228,8 @@ int main(int argc, char** argv) {
 
         // lift the solution from traces
 #ifdef CMDL
-        std::cout << "Lifting the solution from traces..." << std::endl;
+        if (!animate)
+            std::cout << "Lifting the solution from traces..." << std::endl;
 #endif
         Eigen::MatrixXcd S;
         S.resize(grid_size, grid_size);
@@ -295,7 +304,8 @@ int main(int argc, char** argv) {
 
         // output results to file
 #ifdef CMDL
-        std::cout << "Writing results to file..." << std::endl;
+        if (!animate)
+            std::cout << "Writing results to file..." << std::endl;
 #endif
         stringstream ss;
         ss << fname;
@@ -317,6 +327,10 @@ int main(int argc, char** argv) {
         if (animate)
             file_script << "set output \"img/" << fname_count << ".png\"" << std::endl;
         file_script << "splot \'img/" << fname_count << suffix << "\'" << std::endl;
+        if (animate)
+            file_script << "unset label" << std::endl
+                        << "set label left front nopoint \"k = " << k << "\" at 0.1,0.1" << std::endl
+                        << "show label" << std::endl;
 
         // free spline resources
         gsl_spline_free(spline_D_real);
@@ -324,7 +338,7 @@ int main(int argc, char** argv) {
         gsl_spline_free(spline_N_real);
         gsl_spline_free(spline_N_imag);
         gsl_interp_accel_free(acc);
-    }
+    });
 
     file_script.close();
 

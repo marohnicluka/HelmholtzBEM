@@ -18,7 +18,6 @@ class SolutionsOperator
     const BuilderData &builder_data;
     Eigen::PartialPivLU<Eigen::MatrixXcd> lu;
     Eigen::MatrixXd M; // mass matrix
-    Eigen::MatrixXcd project(const Eigen::MatrixXcd &T) const;
     size_t dim_test, dim_trial;
     // timing info
     bool profiling;
@@ -123,6 +122,7 @@ public:
      * Return reference to the mass matrix.
      */
     const Eigen::MatrixXd &mass_matrix() const { return M; };
+    Eigen::MatrixXcd project(const Eigen::MatrixXcd &T) const;
 };
 
 #endif //GEN_SOL_OPHPP

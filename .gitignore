@@ -9,7 +9,8 @@ cmake-build-release
 cmake-build
 doxygen/generated_doc
 arpackpp_lib
-data/*.dat
+data/file_*
+data/*.pal
 data/*.txt
 data/*.m
 data/*.gif
