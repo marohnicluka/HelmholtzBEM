@@ -255,10 +255,12 @@ int main(int argc, char** argv) {
         }
         t0 += plen;
     }
+#ifdef CMDL
     std::cout << "Traces error: " << ((Trace_i_D - T_i_D).matrix().norm() / T_i_D.matrix().norm() +
                                       (Trace_o_D - T_o_D).matrix().norm() / T_o_D.matrix().norm() +
                                       (Trace_i_N - T_i_N).matrix().norm() / T_i_N.matrix().norm() +
                                       (Trace_o_N - T_o_N).matrix().norm() / T_o_N.matrix().norm()) * 0.25 << std::endl;
+#endif
 
     // compute solution in [-1,1]^2
     double step = 2. / (grid_size - 1.);
@@ -281,8 +283,10 @@ int main(int argc, char** argv) {
     }
 
     double sol_err = (S - S_a).norm() / S_a.norm();
+#ifdef CMDL
     std::cout << "Solution error: " << sol_err << std::endl;
     std::cout << "Max relative error: " << ((S - S_a).array().cwiseAbs() / S_a.array().cwiseAbs()).matrix().maxCoeff() << std::endl;
+#endif
 
     //S = (S - S_a).cwiseAbs() / S_a.norm();
 

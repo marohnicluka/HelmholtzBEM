@@ -11,8 +11,7 @@
  * <tt>
  *  /path/to/roots_newton_square_rsvd \<scatterer filename\> \<refraction inside\>
  *     \<refraction outside\> \<initial wavenumber\> \<\#grid points for root search\>
- *     \<\#panels\> \<order of quadrature rule\> \<accuracy of Arnoldi algorithm\>
- *     \<number of subspace iterations\>.
+ *     \<\#panels\> \<quadrature order\> \<accuracy\> \<#subspace iterations\>.
  * </tt>
  *
  * The resulting file will contain the roots in a single column.

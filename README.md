@@ -159,14 +159,16 @@ The output file will contain a section for each set mesh resolution and each of 
 #### <tt>direct_v_arnoldi</tt>
 This target builds a script that computes the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows: 
 ~~~
-/path/to/direct_v_arnoldi <radius of circle> <number of SVs to be computed> <accurracy of arnoldi algorithm>. 
+/path/to/direct_v_arnoldi <radius of circle>
+    <number of SVs to be computed> <accurracy of Arnoldi algorithm>
 ~~~
  The script will generate four files: file_vals_eig_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_vals_arpp_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_timings_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_iter_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat. These will contain the SVs computed using the direct solver, the SVs computed using the Arnoldi algorithm, the time taken by the direct solver and the Arnoldi algorithm, and the number of iterations the Arnoldi algorithm took to converge respectively.
 #### <tt>direct_v_arnoldi_1st_der</tt>
 This target builds a script that computes the first derivative of the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows: 
 ~~~
- /path/to/direct_v_arnoldi_1st_der <radius of circle> <number of SV derivatives to be computed>
- <accurracy of arnoldi algorithm>.
+/path/to/direct_v_arnoldi_1st_der <radius of circle>
+    <number of SV derivatives to be computed>
+    <accurracy of Arnoldi algorithm>
 ~~~
  The script will generate four files:
  file_vals_eig_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_1stDer.dat,
@@ -197,7 +199,7 @@ using first kind direct BIEs.
 No command line parameters are necessary.
 Once built the script can be run as follows: 
 ~~~
-/path/to/library/bin/neumann_example.
+/path/to/library/bin/neumann_example
 ~~~
 The user will be updated over the residual error in the euclidean norm of the computed FEM-space interpolation coefficients to the known FEM-space interpolation coefficients for the current number of panels through the command line.
 
@@ -212,11 +214,13 @@ The results are written to disk.
 No command line arguments are necessary.
 The script can be run as follows:
 ~~~
-/path/to/library/bin/parabolic_approximation <outfile>.
+/path/to/library/bin/parabolic_approximation <outfile>
 ~~~
 In the file the first column contains the initial point used for the parabolic approximation.
 The next three columns contain the function value and the first two derivatives at the initial point that were used to compute the parabolic approximation.
 The user also will get updates on the current best approximation for a minima and the value of the first derivatie at this point through the command line if <tt>-DCMDL</tt> is set.
+
+### Finding minima of the smallest singular value of the BEM approximated BIO
 
 #### <tt>roots_brent_circle</tt>
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the second-kind direct BIEs of the Helmholtz transmission problem using the Van Wijngaarden-Dekker-Brent method.
@@ -227,7 +231,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -251,7 +255,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -274,7 +278,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <half side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -298,7 +302,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <half side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -315,9 +319,9 @@ if <tt>-DCMDL</tt> is set.
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Van Wijngaarden-Dekker-Brent method. The scatterer is set to be a square. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
 /path/to/roots_brent_square_rsvd <half side length of square>
-<refraction inside> <refraction outside> <initial wavenumber>
-<#grid points for root search> <#panels> <order of quadrature rule>
-<accuracy of Arnoldi algorithm> <number of subspace iterations>
+    <refraction inside> <refraction outside> <initial wavenumber>
+    <#grid points for root search> <#panels> <order of quadrature rule>
+    <accuracy> <#subspace iterations>
 ~~~
 The resulting file will contain the boundaries of the interval used to compute the root in the first two columns, which are obtained by approximating the smallest singular value with randomized SVD. Then in the next two columns will be the point and the respective function value. The last column will contain the number of iterations used to find the root. The singular values are computed using the Arnoldi algorithm. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
@@ -333,7 +337,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -357,7 +361,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <half side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -380,7 +384,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_newton_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -404,7 +408,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_newton_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -427,7 +431,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_newton_circle <side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -451,7 +455,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_newton_circle <side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -467,19 +471,19 @@ progress of the algorithm if <tt>-DCMDL</tt> is set.
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Newton-Raphson method. The scatterer is set to be a square. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
 /path/to/roots_newton_square_rsvd <half side length of square>
-<refraction inside> <refraction outside> <initial wavenumber>
-<#grid points for root search> <#panels> <order of quadrature rule>
-<accuracy of Arnoldi algorithm> <number of subspace iterations>
+    <refraction inside> <refraction outside> <initial wavenumber>
+    <#grid points for root search> <#panels> <quadrature order>
+    <accuracy> <#subspace iterations>
 ~~~
 The resulting file will contain the local minima in a single column. The singular values are computed using the randomized SVD algorithm with the specified number of subspace iterations. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 #### <tt>roots_newton_polygon_rsvd</tt>
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Newton-Raphson method. The scatterer is a polygon read from disk (see <tt>scatterer.hpp</tt> for a description of the input file syntax). The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/roots_newton_square_rsvd \<scatterer filename\>
-    \<refraction inside\> \<refraction outside\> \<initial wavenumber\> 
-    \<\#grid points for root search\> \<\#panels\> \<quadrature order\> 
-    \<accuracy\> \<#subspace iterations\>
+/path/to/roots_newton_square_rsvd <scatterer filename>
+    <refraction inside> <refraction outside> <initial wavenumber> 
+    <#grid points for root search> <#panels> <quadrature order> 
+    <accuracy> <#subspace iterations>
 ~~~
 The resulting file will contain the local minima in a single column. The singular values are computed using the randomized SVD algorithm with the specified number of subspace iterations. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
@@ -495,7 +499,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -519,7 +523,7 @@ The script can be run as follows:
 /path/to/library/bin/roots_brent_circle <half side length of square> 
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the left boundary of the
 interval used to compute the root in the first column.
@@ -531,12 +535,10 @@ The singular values and their derivatives are computed using the Arnoldi algorit
 The user will be updated through the command line about the
 progress of the algorithm if <tt>-DCMDL</tt> is set.
 
+### Computing singular values of the BEM approximated BIO
+
 #### <tt>sv_circle</tt>
-This target builds a script that computes the singular values
-of the Galerkin BEM approximated BIO for the
-second-kind direct BIEs of the Helmholtz
-transmission problem. The direct algorithm from Eigen is used to compute the
-sinuglar values.
+This target builds a script that computes the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem. The direct algorithm from Eigen is used to compute the sinuglar values.
 The scatterer is set to be a circle.
 The results are written to file.
 The script can be run as follows:
@@ -544,7 +546,7 @@ The script can be run as follows:
 ~~~
 /path/to/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
-     <#panels> <order of quadrature rule> <outputfile>.
+     <#panels> <order of quadrature rule> <outputfile>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -566,7 +568,7 @@ The script can be run as follows:
 /path/to/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
      <#points to evaluate> <scan complex wavenumbers> <#panels>
-     <order of quadrature rule> <accuracy of arnoldi algorithm>.
+     <order of quadrature rule> <accuracy of Arnoldi algorithm>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -588,7 +590,7 @@ The script can be run as follows:
 ~~~
 /path/to/library/bin/sv_derivative_full <radius of circle> 
     <refraction inside> <refraction outside> <initial wavenumber>
-    <#panels> <order of quadrature rule> <outputfile>.
+    <#panels> <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the value of k in the first column.
 Then the singular values and their first two derivatives at k will be listed from smallest to largest in the columns.
@@ -608,7 +610,7 @@ The script can be run as follows:
 ~~~
 /path/to/library/bin/sv_derivative_verification_circle 
     <radius of circle> <refraction inside> <refraction outside> 
-    <initial wavenumber> <#panels> <order of quadrature rule> <outputfile>.
+    <initial wavenumber> <#panels> <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the value of k in the first column.
 The second column will contain the value of the smallest singular value at this k.
@@ -627,7 +629,7 @@ The script can be run as follows:
 /path/to/library/bin/sv_derivative_verification_circle 
     <half side length of square> <refraction inside> 
     <refraction outside> <initial wavenumber> <#panels> 
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 The resulting file will contain the value of k in the first column.
 The second column will contain the value of the smallest singular value at this k.
@@ -647,7 +649,7 @@ The script can be run as follows:
 ~~~
 /path/to/sv_square <half of side length of square> <refraction inside>
      <refraction outside> <initial wavenumber>
-     <#panels> <order of quadrature rule> <outputfile>.
+     <#panels> <order of quadrature rule> <outputfile>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -669,7 +671,7 @@ The script can be run as follows:
 /path/to/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
      <#points to evaluate> <scan complex wavenumbers> <#panels>
-     <order of quadrature rule> <accuracy of arnoldi algorithm>.
+     <order of quadrature rule> <accuracy of Arnoldi algorithm>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -677,6 +679,8 @@ The rest of the columns contain the singular values from
 smallest to largest for this <tt>k</tt>.
 The user will be updated through the command line about the
 progress of the algorithm if <tt>-DCMDL</tt> is set.
+
+### Solving the Helmholtz transmission problem
 
 #### <tt>transmission_problem_verification</tt>
 This target builds a script that computes solutions to
@@ -689,34 +693,40 @@ The script can be run as follows:
 /path/to/library/bin/transmission_problem_verification 
     <radius of circle> <#coeffs for series expansion of solution> 
     <refraction inside> <refraction outside> <initial wavenumber>
-    <order of quadrature rule> <outputfile>.
+    <order of quadrature rule> <outputfile>
 ~~~
 This output file will contain two columns.
 The first will contain the current panel size.
 The second will contain the residual error in the euclidean norm of the computed FEM-space interpolation coefficients to the known FEM-space interpolation coefficients for the current number of panels.
 The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
+#### <tt>verify_solution_analytic</tt>
+This target builds a script that solves the Helmholtz transmission problem in a circle and compares the result with the analytic solution. The computed solution can be drawn by running the gnuplot script which is written to the <tt>data</tt> directory. The script can be run as follows:
+~~~
+/path/to/verify_solution_analytic <circle radius> <bessel order> 
+    <refraction inside> <refraction outside> <wavenumber>
+    <#panels> <quadrature order> <grid size>
+~~~
+The user will be updated through the command line about the
+progress of the algorithm if <tt>CMDL</tt> is set.
+
 #### <tt>plot_solution_polygon</tt>
 
-This target builds a script that solves the
-Helmholtz transmission problem and outputs the gnuplot file.
-The scatterer and incoming wave are read from disk. The results are
-written to the <tt>data</tt> directory.
-The script can be run as follows:
+This target builds a script that solves the Helmholtz transmission problem and outputs a gnuplot file which plots the solution. The scatterer and incoming wave are read from disk. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/plot_solution_polygon \<scatterer file\>
-    \<incoming wave file\> \<refraction inside\> \<refraction outside\> 
-    \<wavenumber\> \<#panels\> \<quadrature order\> \<grid size\>
-    \<lower left x\> \<lower left y\> \<upper right x\> \<upper right x\> 
-    \<mode\> \<intensity\>
+/path/to/plot_solution_polygon <scatterer file>
+    <incoming wave file> <refraction inside> <refraction outside> 
+    <wavenumber> <#panels> <quadrature order> <grid size>
+    <lower left x> <lower left y> <upper right x> <upper right x> 
+    <mode> <intensity>
 ~~~
 * The first two input arguments are paths to text files. For scatterer/incoming wave file syntax see the corresponding header files <tt>scatterer.hpp</tt> and <tt>incoming.hpp</tt>.
 * <tt>quadrature order</tt> refers to computing the Green indentity integrals when lifting the solution from traces.
 * <tt>grid size</tt> is the number of points sampled at each side of the rectangular drawing area, which is specified by its lower left and upper right corners (the next four input arguments).
 * <tt>mode</tt> is an integer from 0 to 5, where 0/3, 1/4 and 2/5 specify the default drawing mode, animation and amplitude map, respectively, and include the incoming wave if <tt>mode</tt> is greater than 2.
-* <tt>intensity</tt> is a positive real number which controls color intensity of the heat map (1.0 is the default intensity).
+* <tt>intensity</tt> is a positive real number which controls color intensity of the plot (1.0 is the default intensity).
 
-The following commandline produces an animation out of these images (note that it should be run from the <tt>data</tt> directory):
+If <tt>mode</tt> = 1 or 4, then the gnuplot script produces several images in the <tt>data/img</tt> directory. The following commandline produces an animation out of these frames (note that it should be run from the <tt>data</tt> directory):
 ~~~
 convert -delay 4 -loop 0 img/file_plot_solution_square_XXXX_*.png
     output.gif
@@ -727,4 +737,4 @@ progress of the algorithm if <tt>-DCMDL</tt> is set.
 ## Acknowledgements
 This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).
 
-<center><img src='figures/hrzz-logo.png' width='100'></center>
+<img src='figures/hrzz-logo.png' width='100'>
