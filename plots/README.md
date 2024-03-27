@@ -20,7 +20,12 @@ Another reflection example, in which the Herglotz wave is coming directly from b
 
 ## Analytical solution on circle
 
-The solution of the Helmholtz transmission problem on a circle with the incoming wave $f(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$ coincides with the analytical solution.
+The solution of the Helmholtz transmission problem on a circle with the incoming wave $f(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $k=40$, coincides with the analytical solution.
 <p align='center'>
-  <img with='500' src='10.0_40.0_circle.png'>
+  <img width='500' src='10.0_40.0_circle.png'>
+</p>
+The same incoming wave scattered accros a torn/distorted circle:
+<p align='center'>
+  <img width='500' src='10.0_40.0_pcircle.png'>
+  <img width='500' src='10.0_40.0_distorted_circle.png'>
 </p>
