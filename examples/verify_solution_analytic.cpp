@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     ParametrizedMesh mesh(panels);
 
     // generate output filename with set parameters
-    std::string base_name = "file_plot_solution_analytic_";
+    std::string base_name = "file_verify_solution_analytic_";
     std::string suffix = ".dat";
     std::string sep = "_";
     std::string fname = base_name;

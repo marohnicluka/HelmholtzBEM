@@ -318,7 +318,7 @@ if <tt>-DCMDL</tt> is set.
 #### <tt>roots_brent_square_rsvd</tt>
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Van Wijngaarden-Dekker-Brent method. The scatterer is set to be a square. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/roots_brent_square_rsvd <half side length of square>
+/path/to/library/bin/roots_brent_square_rsvd <half side length of square>
     <refraction inside> <refraction outside> <initial wavenumber>
     <#grid points for root search> <#panels> <order of quadrature rule>
     <accuracy> <#subspace iterations>
@@ -470,7 +470,7 @@ progress of the algorithm if <tt>-DCMDL</tt> is set.
 #### <tt>roots_newton_square_rsvd</tt>
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Newton-Raphson method. The scatterer is set to be a square. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/roots_newton_square_rsvd <half side length of square>
+/path/to/library/bin/roots_newton_square_rsvd <half side length of square>
     <refraction inside> <refraction outside> <initial wavenumber>
     <#grid points for root search> <#panels> <quadrature order>
     <accuracy> <#subspace iterations>
@@ -480,7 +480,7 @@ The resulting file will contain the local minima in a single column. The singula
 #### <tt>roots_newton_polygon_rsvd</tt>
 This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Newton-Raphson method. The scatterer is a polygon read from disk (see <tt>scatterer.hpp</tt> for a description of the input file syntax). The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/roots_newton_square_rsvd <scatterer filename>
+/path/to/library/bin/roots_newton_square_rsvd <scatterer filename>
     <refraction inside> <refraction outside> <initial wavenumber> 
     <#grid points for root search> <#panels> <quadrature order> 
     <accuracy> <#subspace iterations>
@@ -544,7 +544,7 @@ The results are written to file.
 The script can be run as follows:
 
 ~~~
-/path/to/sv_circle <radius of circle> <refraction inside>
+/path/to/library/bin/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
      <#panels> <order of quadrature rule> <outputfile>
 ~~~
@@ -565,7 +565,7 @@ The results are written to file.
 The script can be run as follows:
 
 ~~~
-/path/to/sv_circle <radius of circle> <refraction inside>
+/path/to/library/bin/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
      <#points to evaluate> <scan complex wavenumbers> <#panels>
      <order of quadrature rule> <accuracy of Arnoldi algorithm>
@@ -647,9 +647,9 @@ The results are written to file.
 The script can be run as follows:
 
 ~~~
-/path/to/sv_square <half of side length of square> <refraction inside>
-     <refraction outside> <initial wavenumber>
-     <#panels> <order of quadrature rule> <outputfile>
+/path/to/library/bin/sv_square <half of side length of square>
+    <refraction inside> <refraction outside> <initial wavenumber>
+    <#panels> <order of quadrature rule> <outputfile>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -668,7 +668,7 @@ The results are written to file.
 The script can be run as follows:
 
 ~~~
-/path/to/sv_circle <radius of circle> <refraction inside>
+/path/to/library/bin/sv_circle <radius of circle> <refraction inside>
      <refraction outside> <initial wavenumber> <final wavenumber>
      <#points to evaluate> <scan complex wavenumbers> <#panels>
      <order of quadrature rule> <accuracy of Arnoldi algorithm>
@@ -690,9 +690,9 @@ BIEs and Galerkin BEM.
 The results are written to file.
 The script can be run as follows:
 ~~~
-/path/to/library/bin/transmission_problem_verification 
-    <radius of circle> <#coeffs for series expansion of solution> 
-    <refraction inside> <refraction outside> <initial wavenumber>
+/path/to/library/bin/transmission_problem_verification <radius of circle>
+	<#coeffs for series expansion of solution> <refraction inside>
+	<refraction outside> <initial wavenumber>
     <order of quadrature rule> <outputfile>
 ~~~
 This output file will contain two columns.
@@ -703,7 +703,8 @@ The user will be updated through the command line about the progress of the algo
 #### <tt>verify_solution_analytic</tt>
 This target builds a script that solves the Helmholtz transmission problem in a circle and compares the result with the analytic solution. The computed solution can be drawn by running the gnuplot script which is written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/verify_solution_analytic <circle radius> <bessel order> 
+/path/to/library/bin/verify_solution_analytic <circle radius>
+    <#coeffs for series expansion of solution> 
     <refraction inside> <refraction outside> <wavenumber>
     <#panels> <quadrature order> <grid size>
 ~~~
@@ -714,9 +715,10 @@ progress of the algorithm if <tt>CMDL</tt> is set.
 
 This target builds a script that solves the Helmholtz transmission problem and outputs a gnuplot file which plots the solution. The scatterer and incoming wave are read from disk. The results are written to the <tt>data</tt> directory. The script can be run as follows:
 ~~~
-/path/to/plot_solution_polygon <scatterer file>
-    <incoming wave file> <refraction inside> <refraction outside> 
-    <wavenumber> <#panels> <quadrature order> <grid size>
+/path/to/library/bin/plot_solution_polygon
+    <scatterer file> <incoming wave file>
+    <refraction inside> <refraction outside> <wavenumber>
+    <#panels> <quadrature order> <grid size>
     <lower left x> <lower left y> <upper right x> <upper right x> 
     <mode> <intensity>
 ~~~
