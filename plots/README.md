@@ -25,7 +25,7 @@ At $n_i=100$ and $k=40.1$ resp. $k=40.0425$ (quasi-resonance):
   <img width='500' src='100.0_40.0425 (quasi-res).gif'>
 </p>
 
-Note the increase of amplitude of the transmitted wave at quasi-resonance wave numbers $k$. The corresponding amplitude maps for $n_i=100$ are shown below.
+Note the increase of amplitude of the transmitted wave at quasi-resonance wave numbers $k$. The corresponding amplitude plots for $n_i=100$ are shown below.
 
 <p align='center'>
   <img width='500' src='100.0_40.1_amp.png'>
