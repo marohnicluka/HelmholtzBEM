@@ -105,6 +105,10 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
         p2(0) = x(i < n - 1 ? i + 1 : 0);
         p2(1) = y(i < n - 1 ? i + 1 : 0);
         d(i) = (p2 - p1).norm();
+#ifdef CMDL
+        if (d(i) < 1e-9)
+            std::cout << "Warning: two nearly identical vertices detected! Distance: " << d(i) << std::endl;
+#endif
         if (i < n - 1)
             E(i, i) = 1.0 / d(i);
         if (i > 0)
@@ -114,9 +118,8 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
     }
     k = E.fullPivLu().solve(b);
     std::vector<std::pair<double, size_t> > dd(n);
-    for (i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i)
         dd[i] = std::make_pair(k(i), i);
-    }
     std::sort(dd.begin(), dd.end());
     std::reverse(dd.begin(), dd.end());
     auto obj = [&](double send) {

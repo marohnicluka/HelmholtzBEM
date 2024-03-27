@@ -723,9 +723,10 @@ This target builds a script that solves the Helmholtz transmission problem and o
     <mode> <intensity>
 ~~~
 * The first two input arguments are paths to text files. For scatterer/incoming wave file syntax see the corresponding header files <tt>scatterer.hpp</tt> and <tt>incoming.hpp</tt>.
+* <tt>#panels</tt> is the desired number of panels or a fraction of the shortest side of the scatterer specifying the base panel length. Panels are generated automatically in a way that the panel length variance is minimal and the actual number of panels is close to the desired number.
 * <tt>quadrature order</tt> refers to computing the Green indentity integrals when lifting the solution from traces.
 * <tt>grid size</tt> is the number of points sampled at each side of the rectangular drawing area, which is specified by its lower left and upper right corners (the next four input arguments).
-* <tt>mode</tt> is an integer from 0 to 5, where 0/3, 1/4 and 2/5 specify the default drawing mode, animation and amplitude map, respectively, and include the incoming wave if <tt>mode</tt> is greater than 2.
+* <tt>mode</tt> is an integer from 0 to 5, where 0/3, 1/4 and 2/5 specify the default drawing mode (still images), animation mode and amplitude map mode, respectively. The incoming wave is added to the scattered wave if <tt>mode</tt> is greater than 2.
 * <tt>intensity</tt> is a positive real number which controls color intensity of the plot (1.0 is the default intensity).
 
 If <tt>mode</tt> = 1 or 4, then the gnuplot script produces several images in the <tt>data/img</tt> directory. The following commandline produces an animation out of these frames (note that it should be run from the <tt>data</tt> directory):
