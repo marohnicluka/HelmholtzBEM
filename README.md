@@ -1,13 +1,15 @@
 # Helmholtz Transmission Problem BEM with randomized SVD
 ## Introduction
-This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by Diego Renner, with the following improvements:
+This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by Diego Renner [[1]](#1), with the following improvements:
 
 - The code is upgraded to the C++17 standard. The typedef <tt>data</tt> was replaced by <tt>grid_data</tt> because it clashed with <tt>std::data</tt>.
 - The new dependencies are the Intel <tt>tbb</tt> library for parallelization, which is supported by GCC, and the <tt>gsl</tt> library which provides the spline interpolation routines used in trace approximation.
 - Linking to [complex_bessel](https://github.com/joeydumont/complex_bessel) library is not needed anymore. The routines for computing Bessel functions are implemented from scratch in C++ using the theoretical background presented in two papers by Donald E. Amos (1983).
 - Significant speedups are achieved in the routine for assembling solution matrices and their derivatives, mostly by removing duplicate computations.
 - A randomized SVD algorithm was implemented following the ideas in [this paper](https://arxiv.org/abs/0909.4061). The corresponding routine called <tt>randomized_svd::sv</tt> approximates the smallest singular value of the solution matrix by using this technique.
-- Solution of the Helmholtz transmission problem can be plotted for an arbitrary polygonal scatterer and for several types of incoming waves. 
+- Solution of the Helmholtz transmission problem can be plotted for an arbitrary polygonal scatterer and for several types of incoming waves.
+
+We will appreciate if users of this library cite the paper [[1]](#1) in their work.
 
 ## Configuration and Dependencies
 The library can be configured by running 
@@ -738,4 +740,14 @@ The user will be updated through the comma	nd line about the
 progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 ## Acknowledgements
-This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).<img src='figures/hrzz-logo.png' width='100'> The development was supervised by Luka Grubišić.
+This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).<img align='top' src='figures/hrzz-logo.png' width='100'>
+
+The development was supervised by Luka Grubišić.
+
+## References
+<a id="1">[1]</a> 
+L. Grubišić, R. Hiptmair, and D. Renner,
+"_Detecting Near Resonances in Acoustic Scattering_,"
+Journal of Scientific Computing, vol. 96, no. 3, Sep. 2023,
+doi: 10.1007/s10915-023-02284-5
+
