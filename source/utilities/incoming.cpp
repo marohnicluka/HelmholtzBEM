@@ -156,48 +156,59 @@ namespace incoming {
 
     complex_t circular_J(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
         auto p = x - x0;
-        double phi = atan2(p(1), p(0));
         double r = p.norm();
-        return complex_bessel::J(l, k*r) * exp(ii * double(l) * phi);
+        double theta = atan2(p(1) / r, p(0) / r);
+        return complex_bessel::J(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr) {
         auto p = x - x0;
-        double theta = atan2(p(1), p(0)), s = sin(theta), c = cos(theta);
         double r = p.norm(), a = k * r;
+        double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
-        complex_t jl = complex_bessel::J(l, a), jlp = complex_bessel::J(l-1, a);
-        complex_t dfdr = k * (jlp - l/r * jl), dfdt = jl * il;
+        complex_t jl = complex_bessel::J(l, a), jlp = complex_bessel::J(l-1, a), jln = complex_bessel::J(l+1, a);
+        complex_t dfdr = k * (jlp - jln) / 2., dfdt = jl * il;
         Eigen::Vector2cd res;
-        res << dfdr * c - dfdt / r * s, dfdr * s + dfdt / r * c;
-        return exp(il * theta) * res;
+        res << dfdr * c - dfdt * s / r, dfdr * s + dfdt * c / r;
+        res *= exp(-il * theta);
+        if (ddr != NULL)
+            *ddr = p.normalized().dot(res);
+        return res;
     }
 
     complex_t circular_Y(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
         auto p = x - x0;
-        double phi = atan2(p(1), p(0));
         double r = p.norm();
-        return complex_bessel::Y(l, k*r) * exp(ii * double(l) * phi);
+        double theta = atan2(p(1) / r, p(0) / r);
+        return complex_bessel::Y(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr) {
         auto p = x - x0;
-        double theta = atan2(p(1), p(0)), s = sin(theta), c = cos(theta);
         double r = p.norm(), a = k * r;
+        double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
-        complex_t yl = complex_bessel::Y(l, a), ylp = complex_bessel::Y(l-1, a);
-        complex_t dfdr = k * (ylp - l/r * yl), dfdt = yl * il;
+        complex_t yl = complex_bessel::Y(l, a), ylp = complex_bessel::Y(l-1, a), yln = complex_bessel::Y(l+1, a);
+        complex_t dfdr = k * (ylp - yln) / 2., dfdt = yl * il;
         Eigen::Vector2cd res;
         res << dfdr * c - dfdt / r * s, dfdr * s + dfdt / r * c;
-        return exp(il * theta) * res;
+        res *= exp(-il * theta);
+        if (ddr != NULL)
+            *ddr = p.normalized().dot(res);
+        return res;
     }
 
     complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k) {
         return circular_J(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y(x, x0, l, k);
     }
 
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k) {
-        return circular_J_del(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y_del(x, x0, l, k);
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k, complex_t *ddr) {
+        complex_t ddr_1, ddr_2, a = (kind == 1 ? ii : -ii);
+        auto v1 = circular_J_del(x, x0, l, k, &ddr_1);
+        auto v2 = circular_Y_del(x, x0, l, k, &ddr_2);
+        if (ddr != NULL)
+            *ddr = ddr_1 + a * ddr_2;
+        return v1 + a * v2;
     }
 
     double integrand_real(double theta, void *p) {

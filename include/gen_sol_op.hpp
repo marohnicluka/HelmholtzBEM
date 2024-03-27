@@ -20,7 +20,7 @@ class SolutionsOperator
     Eigen::MatrixXd M; // mass matrix
     size_t dim_test, dim_trial;
     // timing info
-    bool profiling;
+    bool profiling, projection_enabled;
     unsigned count[3] = {0, 0, 0};
     unsigned total_assembly_time[3] = {0, 0, 0};
     unsigned total_hankel_computation_time[3] = {0, 0, 0};
@@ -40,7 +40,7 @@ public:
      * @param builder_data_in bulder data object
      * @param profiling_in whether to do time profiling
      */
-    SolutionsOperator(const BuilderData &builder_data_in, bool profiling_in);
+    SolutionsOperator(const BuilderData &builder_data_in, bool profiling_in, bool enable_projection = true);
     // destructor
     ~SolutionsOperator();
     /**

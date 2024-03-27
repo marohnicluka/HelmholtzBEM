@@ -1083,14 +1083,12 @@ namespace complex_bessel {
     /* Bessel functions J_v(z) and Y_v(z) */
     Cplx J(Real v,const Cplx &z,bool scaled) {
         Cplx si=sign1(imag(z))*i;
+        if (zero(arg(z)) && z.real() > 0) {
+            if (zero(std::round(v)-v))
+                return jn((int)std::round(v),z.real());
+            return cyl_bessel_j(v,z.real());
+        }
         if (v>=0.0) {
-            if (zero(arg(z))) {
-                if (v==0.0)
-                    return j0(real(z));
-                if (v==1.0)
-                    return j1(real(z));
-                return cyl_bessel_j(v,real(z));
-            }
             if (abs(zero(arg(z))-M_PI))
                 return exp(si*M_PI*v)*cyl_bessel_j(v,-real(z));
             if (v==0.0)
@@ -1101,13 +1099,10 @@ namespace complex_bessel {
         return exp(si*M_PI_2*v)*I_in(v,-z*si,scaled);
     }
     Cplx Y(Real v,const Cplx &z,bool scaled) {
-        if (zero(imag(z))) {
-            if (v==0.0)
-                return j0(real(z));
-            if (v==1.0)
-                return j1(real(z));
-            if (v>0.0)
-                return cyl_neumann(v,real(z));
+        if (zero(imag(z)) && z.real() > 0 && v>=0.0) {
+            if (zero(std::round(v)-v))
+                return yn((int)std::round(v),z.real());
+            return cyl_neumann(v,z.real());
         }
         Real s=sign1(imag(z)),va=abs(v);
         Cplx si=i*s,a=exp(va*M_PI_2*si),iz=z*si,Kv=NAN,Iv;
@@ -1286,7 +1281,7 @@ namespace complex_bessel {
     }
     void Bessel_JY_0(const Eigen::ArrayXXd &x,Eigen::ArrayXXd &J0,Eigen::ArrayXXd &Y0) {
         size_t nr=x.rows(),nc=x.cols();
-        if (x.cwiseAbs().maxCoeff() < 12.0) {
+        if (!_parallelize && x.cwiseAbs().maxCoeff() < 12.0) {
             Eigen::Index max_i,max_j;
             x.cwiseAbs().maxCoeff(&max_i,&max_j);
             Eigen::ArrayXXd x_2=x/2.0,x2_4=x_2.square(),t,log_x_2_plus_gamma=x_2.log()-D[9];
@@ -1304,29 +1299,28 @@ namespace complex_bessel {
             Y0+=log_x_2_plus_gamma*J0;
             Y0*=M_2_PI;
         } else {
-            std::vector<unsigned int> jv(nc);
-            std::iota(jv.begin(), jv.end(), 0);
-            if (_parallelize)
-                for_each(std::execution::par, jv.begin(), jv.end(), [&](unsigned int j) {
-                    for (unsigned i = 0; i < nr; ++i) {
-                        double v = x(i, j);
-                        J0(i, j) = j0(v);
-                        Y0(i, j) = y0(v);
-                    }
+            if (_parallelize) {
+                std::vector<std::pair<size_t,size_t> > ind(nc*nr);
+                std::iota(ind.begin(),ind.end(),PairInc<size_t>(0,0,nr));
+                for_each(std::execution::par,ind.begin(),ind.end(),[&](std::pair<size_t,size_t> &p) {
+                    size_t i=p.first,j=p.second;
+                    double v=x(i,j);
+                    J0(i,j)=j0(v);
+                    Y0(i,j)=y0(v);
                 });
-            else
-                for (unsigned j = 0; j < nc; ++j) {
-                    for (unsigned i = 0; i < nr; ++i) {
-                        double v = x(i, j);
-                        J0(i, j) = j0(v);
-                        Y0(i, j) = y0(v);
+            } else
+                for (unsigned j=0; j<nc; ++j) {
+                    for (unsigned i=0; i<nr; ++i) {
+                        double v=x(i,j);
+                        J0(i,j)=j0(v);
+                        Y0(i,j)=y0(v);
                     }
                 }
         }
     }
     void Bessel_JY_01(const Eigen::ArrayXXd &x,Eigen::ArrayXXd &J0,Eigen::ArrayXXd &Y0,Eigen::ArrayXXd &J1,Eigen::ArrayXXd &Y1) {
         size_t nr=x.rows(),nc=x.cols();
-        if (x.cwiseAbs().maxCoeff() <= 12.0) {
+        if (!_parallelize && x.cwiseAbs().maxCoeff() <= 12.0) {
             Eigen::Index max_i,max_j;
             x.cwiseAbs().maxCoeff(&max_i,&max_j);
             Eigen::ArrayXXd x2_4=x.square()/4.0,t,log_x_2_plus_gamma=(x/2.0).log()-D[9];
@@ -1352,26 +1346,25 @@ namespace complex_bessel {
             Y1+=2.0*(log_x_2_plus_gamma*J1+(J0-2.0)/x);
             Y1*=M_1_PI;
         } else {
-            std::vector<unsigned int> jv(nc);
-            std::iota(jv.begin(), jv.end(), 0);
-            if (_parallelize)
-                for_each(std::execution::par, jv.begin(), jv.end(), [&](unsigned int j) {
-                    for (unsigned i = 0; i < nr; ++i) {
-                        double v = x(i, j);
-                        J0(i, j) = j0(v);
-                        J1(i, j) = j1(v);
-                        Y0(i, j) = y0(v);
-                        Y1(i, j) = y1(v);
-                    }
+            if (_parallelize) {
+                std::vector<std::pair<size_t,size_t> > ind(nc*nr);
+                std::iota(ind.begin(),ind.end(),PairInc<size_t>(0,0,nr));
+                for_each(std::execution::par,ind.begin(),ind.end(),[&](std::pair<size_t,size_t> &p) {
+                    size_t i=p.first,j=p.second;
+                    double v=x(i,j);
+                    J0(i,j)=j0(v);
+                    J1(i,j)=j1(v);
+                    Y0(i,j)=y0(v);
+                    Y1(i,j)=y1(v);
                 });
-            else
-                for (unsigned j = 0; j < nc; ++j) {
-                    for (unsigned i = 0; i < nr; ++i) {
-                        double v = x(i, j);
-                        J0(i, j) = j0(v);
-                        J1(i, j) = j1(v);
-                        Y0(i, j) = y0(v);
-                        Y1(i, j) = y1(v);
+            } else
+                for (unsigned j=0; j<nc; ++j) {
+                    for (unsigned i=0; i<nr; ++i) {
+                        double v=x(i,j);
+                        J0(i,j)=j0(v);
+                        J1(i,j)=j1(v);
+                        Y0(i,j)=y0(v);
+                        Y1(i,j)=y1(v);
                     }
                 }
         }

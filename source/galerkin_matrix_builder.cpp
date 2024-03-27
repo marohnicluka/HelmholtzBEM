@@ -3,8 +3,15 @@
 #include <numeric>
 #include <iostream>
 #include <chrono>
+#include <execution>
 
 static const double epsilon = std::numeric_limits<double>::epsilon();
+
+bool _parallelize = false;
+
+void parallelize_builder(bool yes) {
+    _parallelize = yes;
+}
 
 BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
                          const AbstractBEMSpace &test_space_in,
@@ -62,11 +69,41 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
     m_single_layer_adjacent_fg.resize(Qtest * N, Qtest * N);
     m_single_layer_adjacent_fg_swap.resize(Qtest * N, Qtest * N);
     m_single_layer_general_fg.resize(Qtest * Ns, Qtest * Ns);
+    std::vector<std::pair<size_t, size_t> > IJ;
+    if (_parallelize) {
+        IJ.reserve(N * N);
+        for (size_t J = 0; J < N; ++J)
+            for (size_t I = 0; I < N; ++I)
+                IJ.push_back(std::make_pair(I, J));
+    }
     for (size_t j = 0; j < Qtrial; ++j) {
         for (size_t i = 0; i < Qtest; ++i) {
             auto dbl_g_fg = m_double_layer_general_fg.block(i * Ns, j * Ns, Ns, Ns);
             auto dbl_g_fg_t = m_double_layer_general_fg_t.block(i * Ns, j * Ns, Ns, Ns);
-            for (size_t J = 0; J < N; ++J) {
+            if (_parallelize) for_each(std::execution::par, IJ.begin(), IJ.end(), [&](const std::pair<size_t, size_t> &p) {
+                    size_t I = p.first, J = p.second;
+                    double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
+                    m_double_layer_coinciding_fg(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction(i, sc) * trial_space.evaluateShapeFunction(j, tc);
+                    m_double_layer_coinciding_fg_t(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction(i, tc) * trial_space.evaluateShapeFunction(j, sc);
+                    m_double_layer_adjacent_fg(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction_01_swapped(i, sa) * trial_space.evaluateShapeFunction(j, ta);
+                    m_double_layer_adjacent_fg_swap(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction(i, sa) * trial_space.evaluateShapeFunction_01_swapped(j, ta);
+                    m_double_layer_adjacent_fg_t(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction_01_swapped(i, ta) * trial_space.evaluateShapeFunction(j, sa);
+                    m_double_layer_adjacent_fg_swap_t(i * N + I, j * N + J) =
+                        test_space.evaluateShapeFunction(i, ta) * trial_space.evaluateShapeFunction_01_swapped(j, sa);
+                    if (I < Ns && J < Ns) {
+                        double s = m_sg(I, J), t = m_tg(I, J);
+                        dbl_g_fg(I, J) =
+                            test_space.evaluateShapeFunction(i, s) * trial_space.evaluateShapeFunction(j, t);
+                        dbl_g_fg_t(I, J) =
+                            test_space.evaluateShapeFunction(i, t) * trial_space.evaluateShapeFunction(j, s);
+                    }
+                });
+            else for (size_t J = 0; J < N; ++J) {
                 for (size_t I = 0; I < N; ++I) {
                     double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
                     m_double_layer_coinciding_fg(i * N + I, j * N + J) =
@@ -100,7 +137,30 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
             auto hyp_a_fg_arc_swap = m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N);
             auto hyp_g_fg = m_hypersingular_general_fg.block(i * Ns, j * Ns, Ns, Ns);
             auto hyp_g_fg_arc = m_hypersingular_general_fg_arc.block(i * Ns, j * Ns, Ns, Ns);
-            for (size_t J = 0; J < N; ++J) {
+            if (_parallelize) for_each(std::execution::par, IJ.begin(), IJ.end(), [&](const std::pair<size_t, size_t> &p) {
+                    size_t I = p.first, J = p.second;
+                    double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
+                    hyp_c_fg(I, J) =
+                        trial_space.evaluateShapeFunction(i, sc) * trial_space.evaluateShapeFunction(j, tc);
+                    hyp_c_fg_arc(I, J) =
+                        trial_space.evaluateShapeFunctionDot_01(i, sc) * trial_space.evaluateShapeFunctionDot_01(j, tc);
+                    hyp_a_fg(I, J) =
+                        trial_space.evaluateShapeFunction_01_swapped(i, sa) * trial_space.evaluateShapeFunction(j, ta);
+                    hyp_a_fg_swap(I, J) =
+                        trial_space.evaluateShapeFunction(i, sa) * trial_space.evaluateShapeFunction_01_swapped(j, ta);
+                    hyp_a_fg_arc(I, J) =
+                        trial_space.evaluateShapeFunctionDot_01_swapped(i, sa) * trial_space.evaluateShapeFunctionDot_01(j, ta);
+                    hyp_a_fg_arc_swap(I, J) =
+                        trial_space.evaluateShapeFunctionDot_01(i, sa) * trial_space.evaluateShapeFunctionDot_01_swapped(j, ta);
+                    if (I < Ns && J < Ns) {
+                        double s = m_sg(I, J), t = m_tg(I, J);
+                        hyp_g_fg(I, J) =
+                            trial_space.evaluateShapeFunction(i, s) * trial_space.evaluateShapeFunction(j, t);
+                        hyp_g_fg_arc(I, J) =
+                            trial_space.evaluateShapeFunctionDot_01(i, s) * trial_space.evaluateShapeFunctionDot_01(j, t);
+                    }
+                });
+            else for (size_t J = 0; J < N; ++J) {
                 for (size_t I = 0; I < N; ++I) {
                     double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
                     hyp_c_fg(I, J) =
@@ -132,7 +192,22 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
             auto sng_a_fg = m_single_layer_adjacent_fg.block(i * N, j * N, N, N);
             auto sng_a_fg_swap = m_single_layer_adjacent_fg_swap.block(i * N, j * N, N, N);
             auto sng_g_fg = m_single_layer_general_fg.block(i * Ns, j * Ns, Ns, Ns);
-            for (size_t J = 0; J < N; ++J) {
+            if (_parallelize) for_each(std::execution::par, IJ.begin(), IJ.end(), [&](const std::pair<size_t, size_t> &p) {
+                    size_t I = p.first, J = p.second;
+                    double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
+                    sng_c_fg(I, J) =
+                        test_space.evaluateShapeFunction(i, sc) * test_space.evaluateShapeFunction(j, tc);
+                    sng_a_fg(I, J) =
+                        test_space.evaluateShapeFunction_01_swapped(i, sa) * test_space.evaluateShapeFunction(j, ta);
+                    sng_a_fg_swap(I, J) =
+                        test_space.evaluateShapeFunction(i, sa) * test_space.evaluateShapeFunction_01_swapped(j, ta);
+                    if (I < Ns && J < Ns) {
+                        double s = m_sg(I, J), t = m_tg(I, J);
+                        sng_g_fg(I, J) =
+                            test_space.evaluateShapeFunction(i, s) * test_space.evaluateShapeFunction(j, t);
+                    }
+                });
+            else for (size_t J = 0; J < N; ++J) {
                 for (size_t I = 0; I < N; ++I) {
                     double sc = m_sc(I, J), sa = m_sa(I, J), tc = m_tc(I, J), ta = m_ta(I, J);
                     sng_c_fg(I, J) =
@@ -174,42 +249,84 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
     swapped_op_ta.resize(N, N * numpanels);
     op_sg.resize(Ns, Ns * numpanels);
     op_tg.resize(Ns, Ns * numpanels);
-    Eigen::ArrayXXcd tmp(N, N), tmps(Ns, Ns);
-    Eigen::ArrayXXd tmp_n(N, N), tmps_n(Ns, Ns);
-    for (size_t i = 0; i < numpanels; ++i) {
-        const auto &p = *panels[i];
-        p.Derivative_01(m_sc, tmp, tmp_n);
-        Derivative_01_sc.block(0, N * i, N, N) = tmp;
-        Derivative_01_sc_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01(m_tc, tmp, tmp_n);
-        Derivative_01_tc.block(0, N * i, N, N) = tmp;
-        Derivative_01_tc_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01(m_sa, tmp, tmp_n);
-        Derivative_01_sa.block(0, N * i, N, N) = tmp;
-        Derivative_01_sa_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01(m_ta, tmp, tmp_n);
-        Derivative_01_ta.block(0, N * i, N, N) = tmp;
-        Derivative_01_ta_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01_swapped(m_sa, tmp, tmp_n, true);
-        Derivative_01_swapped_sa.block(0, N * i, N, N) = tmp;
-        Derivative_01_swapped_sa_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01_swapped(m_ta, tmp, tmp_n, true);
-        Derivative_01_swapped_ta.block(0, N * i, N, N) = tmp;
-        Derivative_01_swapped_ta_n.block(0, N * i, N, N) = tmp_n;
-        p.Derivative_01(m_sg, tmps, tmps_n);
-        Derivative_01_sg.block(0, Ns * i, Ns, Ns) = tmps;
-        Derivative_01_sg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
-        p.Derivative_01(m_tg, tmps, tmps_n);
-        Derivative_01_tg.block(0, Ns * i, Ns, Ns) = tmps;
-        Derivative_01_tg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
-        op_sc.block(0, i * N, N, N) = p[m_sc];
-        op_tc.block(0, i * N, N, N) = p[m_tc];
-        op_sa.block(0, i * N, N, N) = p[m_sa];
-        op_ta.block(0, i * N, N, N) = p[m_ta];
-        swapped_op_sa.block(0, i * N, N, N) = p.swapped_op(m_sa);
-        swapped_op_ta.block(0, i * N, N, N) = p.swapped_op(m_ta);
-        op_sg.block(0, i * Ns, Ns, Ns) = p[m_sg];
-        op_tg.block(0, i * Ns, Ns, Ns) = p[m_tg];
+    if (_parallelize) {
+        std::vector<size_t> iv(numpanels);
+        std::iota(iv.begin(), iv.end(), 0);
+        for_each(std::execution::par, iv.begin(), iv.end(), [&](size_t &i) {
+            Eigen::ArrayXXcd tmp(N, N), tmps(Ns, Ns);
+            Eigen::ArrayXXd tmp_n(N, N), tmps_n(Ns, Ns);
+            const auto &p = *panels[i];
+            p.Derivative_01(m_sc, tmp, tmp_n);
+            Derivative_01_sc.block(0, N * i, N, N) = tmp;
+            Derivative_01_sc_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_tc, tmp, tmp_n);
+            Derivative_01_tc.block(0, N * i, N, N) = tmp;
+            Derivative_01_tc_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_sa, tmp, tmp_n);
+            Derivative_01_sa.block(0, N * i, N, N) = tmp;
+            Derivative_01_sa_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_ta, tmp, tmp_n);
+            Derivative_01_ta.block(0, N * i, N, N) = tmp;
+            Derivative_01_ta_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01_swapped(m_sa, tmp, tmp_n, true);
+            Derivative_01_swapped_sa.block(0, N * i, N, N) = tmp;
+            Derivative_01_swapped_sa_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01_swapped(m_ta, tmp, tmp_n, true);
+            Derivative_01_swapped_ta.block(0, N * i, N, N) = tmp;
+            Derivative_01_swapped_ta_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_sg, tmps, tmps_n);
+            Derivative_01_sg.block(0, Ns * i, Ns, Ns) = tmps;
+            Derivative_01_sg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
+            p.Derivative_01(m_tg, tmps, tmps_n);
+            Derivative_01_tg.block(0, Ns * i, Ns, Ns) = tmps;
+            Derivative_01_tg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
+            op_sc.block(0, i * N, N, N) = p[m_sc];
+            op_tc.block(0, i * N, N, N) = p[m_tc];
+            op_sa.block(0, i * N, N, N) = p[m_sa];
+            op_ta.block(0, i * N, N, N) = p[m_ta];
+            swapped_op_sa.block(0, i * N, N, N) = p.swapped_op(m_sa);
+            swapped_op_ta.block(0, i * N, N, N) = p.swapped_op(m_ta);
+            op_sg.block(0, i * Ns, Ns, Ns) = p[m_sg];
+            op_tg.block(0, i * Ns, Ns, Ns) = p[m_tg];
+        });
+    } else {
+        Eigen::ArrayXXcd tmp(N, N), tmps(Ns, Ns);
+        Eigen::ArrayXXd tmp_n(N, N), tmps_n(Ns, Ns);
+        for (size_t i = 0; i < numpanels; ++i) {
+            const auto &p = *panels[i];
+            p.Derivative_01(m_sc, tmp, tmp_n);
+            Derivative_01_sc.block(0, N * i, N, N) = tmp;
+            Derivative_01_sc_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_tc, tmp, tmp_n);
+            Derivative_01_tc.block(0, N * i, N, N) = tmp;
+            Derivative_01_tc_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_sa, tmp, tmp_n);
+            Derivative_01_sa.block(0, N * i, N, N) = tmp;
+            Derivative_01_sa_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_ta, tmp, tmp_n);
+            Derivative_01_ta.block(0, N * i, N, N) = tmp;
+            Derivative_01_ta_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01_swapped(m_sa, tmp, tmp_n, true);
+            Derivative_01_swapped_sa.block(0, N * i, N, N) = tmp;
+            Derivative_01_swapped_sa_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01_swapped(m_ta, tmp, tmp_n, true);
+            Derivative_01_swapped_ta.block(0, N * i, N, N) = tmp;
+            Derivative_01_swapped_ta_n.block(0, N * i, N, N) = tmp_n;
+            p.Derivative_01(m_sg, tmps, tmps_n);
+            Derivative_01_sg.block(0, Ns * i, Ns, Ns) = tmps;
+            Derivative_01_sg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
+            p.Derivative_01(m_tg, tmps, tmps_n);
+            Derivative_01_tg.block(0, Ns * i, Ns, Ns) = tmps;
+            Derivative_01_tg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
+            op_sc.block(0, i * N, N, N) = p[m_sc];
+            op_tc.block(0, i * N, N, N) = p[m_tc];
+            op_sa.block(0, i * N, N, N) = p[m_sa];
+            op_ta.block(0, i * N, N, N) = p[m_ta];
+            swapped_op_sa.block(0, i * N, N, N) = p.swapped_op(m_sa);
+            swapped_op_ta.block(0, i * N, N, N) = p.swapped_op(m_ta);
+            op_sg.block(0, i * Ns, Ns, Ns) = p[m_sg];
+            op_tg.block(0, i * Ns, Ns, Ns) = p[m_tg];
+        }
     }
 }
 
@@ -391,7 +508,6 @@ void GalerkinMatrixBuilder::double_layer_coinciding(int der) throw() {
     const auto &v_norm = m_v_norm[0], &v_norm2 = m_v_norm2[0];
     const auto &h1 = m_h1[0], &h0 = m_h0[0];
     auto mask = (ksqrtca * v_norm) > epsilon;
-    Eigen::ArrayXXd vdotn, cf;
     double_layer_interaction_matrix.setZero();
     masked1[0] = mask.select(ksqrtc * h1 / v_norm, (v_norm > epsilon).select(M_2_PI / v_norm2, m_zero));
     if (der > 0) {
@@ -404,11 +520,11 @@ void GalerkinMatrixBuilder::double_layer_coinciding(int der) throw() {
     }
     for (K = 0; K < 2; ++K) {
         const auto &tangent = (K == 0 ? m_tangent_p : m_tangent)[0];
-        vdotn = (K * 2 - 1.) * data.m_wc * (K == 0 ? m_tangent_norm : m_tangent_p_norm)[0] *
+        auto vdotn = (K * 2 - 1.) * data.m_wc * (K == 0 ? m_tangent_norm : m_tangent_p_norm)[0] *
             (v.imag() * tangent.real() - v.real() * tangent.imag());
         for (j = 0; j < Qtrial; ++j) {
             for (i = 0; i < Qtest; ++i) {
-                cf = vdotn * (K == 0 ? data.m_double_layer_coinciding_fg : data.m_double_layer_coinciding_fg_t).block(i * N, j * N, N, N);
+                auto cf = vdotn * (K == 0 ? data.m_double_layer_coinciding_fg : data.m_double_layer_coinciding_fg_t).block(i * N, j * N, N, N);
                 double_layer_interaction_matrix(i, j) += (cf * masked1[0]).sum();
                 if (der > 0)
                     double_layer_der_interaction_matrix(i, j) += (cf * masked2[0]).sum();
@@ -431,7 +547,6 @@ void GalerkinMatrixBuilder::double_layer_adjacent(bool swap, int der, bool trans
         double_layer_der_interaction_matrix.setZero();
     if (der > 1)
         double_layer_der2_interaction_matrix.setZero();
-    Eigen::ArrayXXd vdotn, cf;
     for (K = 0; K < 2; ++K) {
         const auto &tangent = (transp ? m_tangent : m_tangent_p)[K];
         const auto &v = m_v[K];
@@ -450,7 +565,7 @@ void GalerkinMatrixBuilder::double_layer_adjacent(bool swap, int der, bool trans
                 else masked3[K] = masked2[K] - mask.select(ksqrtc * v_norm * h1, m_zero);
             }
         }
-        vdotn = (transp? 1.0 : -1.0) * data.m_wa * (v.imag() * tangent.real() - v.real() * tangent.imag()) *
+        auto vdotn = (transp? 1.0 : -1.0) * data.m_wa * (v.imag() * tangent.real() - v.real() * tangent.imag()) *
             (transp ? m_tangent_p_norm : m_tangent_norm)[K];
         const Eigen::ArrayXXd &fg = swap ? ((transp ? K == 0 : K == 1) ? data.m_double_layer_adjacent_fg_swap_t
                                                                        : data.m_double_layer_adjacent_fg_swap)
@@ -458,7 +573,7 @@ void GalerkinMatrixBuilder::double_layer_adjacent(bool swap, int der, bool trans
                                                                        : data.m_double_layer_adjacent_fg);
         for (j = 0; j < Qtrial; ++j) {
             for (i = 0; i < Qtest; ++i) {
-                cf = vdotn * fg.block(i * N, j * N, N, N);
+                auto cf = vdotn * fg.block(i * N, j * N, N, N);
                 double_layer_interaction_matrix(i, j) += (cf * masked1[K]).sum();
                 if (der > 0)
                     double_layer_der_interaction_matrix(i, j) += (cf * masked2[K]).sum();
@@ -476,7 +591,7 @@ void GalerkinMatrixBuilder::double_layer_adjacent(bool swap, int der, bool trans
 // compute interaction matrices for the K submatrix, disjoint panels case
 void GalerkinMatrixBuilder::double_layer_general(int der, bool transp) throw() {
     size_t i, j, N = data.getGaussQROrder(), Qtest = data.getQtest(), Qtrial = data.getQtrial();
-    Eigen::ArrayXXd cf, vdotn;
+    Eigen::ArrayXXd vdotn;
     const Eigen::ArrayXXd &fg = transp ? data.m_double_layer_general_fg_t : data.m_double_layer_general_fg;
     if (!transp) {
         vdotn = data.m_wg * (m_v_s.real() * m_tangent_p_s.imag() - m_v_s.imag() * m_tangent_p_s.real()) * m_tangent_norm_s;
@@ -494,7 +609,7 @@ void GalerkinMatrixBuilder::double_layer_general(int der, bool transp) throw() {
     } else vdotn = data.m_wg * (m_v_s.imag() * m_tangent_s.real() - m_v_s.real() * m_tangent_s.imag()) * m_tangent_p_norm_s;
     for (j = 0; j < Qtrial; ++j) {
         for (i = 0; i < Qtest; ++i) {
-            cf = vdotn * fg.block(i * N, j * N, N, N);
+            auto cf = vdotn * fg.block(i * N, j * N, N, N);
             double_layer_interaction_matrix(i, j) = (cf * masked1_s).sum();
             if (der > 0)
                 double_layer_der_interaction_matrix(i, j) = (cf * masked2_s).sum();
@@ -516,8 +631,7 @@ void GalerkinMatrixBuilder::hypersingular_coinciding(int der) throw() {
     const auto &v_norm = m_v_norm[0], &v_norm2 = m_v_norm2[0];
     Eigen::ArrayXXd tdottp = 2.0 * (tangent.imag() * tangent_p.imag() + tangent.real() * tangent_p.real()) * data.m_wc;
     auto mask = ksqrtca * v_norm > epsilon;
-    Eigen::ArrayXXcd h1_vnorm, cf;
-    Eigen::ArrayXXd temp;
+    Eigen::ArrayXXcd h1_vnorm;
     hypersingular_interaction_matrix.setZero();
     masked1[0] = mask.select(h0, (v_norm > epsilon).select(-M_2_PI * v_norm.log(), m_zero));
     if (der > 0) {
@@ -537,8 +651,8 @@ void GalerkinMatrixBuilder::hypersingular_coinciding(int der) throw() {
                         hypersingular_der2_interaction_matrix(i, j) = hypersingular_der2_interaction_matrix(j, i);
                     continue;
                 }
-                cf = data.m_wc * data.m_hypersingular_coinciding_fg_arc.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N) -
-                    kkc * (temp = data.m_hypersingular_coinciding_fg.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N) * tdottp);
+                auto temp = data.m_hypersingular_coinciding_fg.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N) * tdottp;
+                auto cf = data.m_wc * data.m_hypersingular_coinciding_fg_arc.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N) - kkc * temp;
                 hypersingular_interaction_matrix(i, j) += (cf * masked1[0]).sum();
                 if (der > 0)
                     hypersingular_der_interaction_matrix(i, j) += mask.select(h1_vnorm * cf + ksqrtc * h0 * temp, m_zero).sum();
@@ -562,8 +676,8 @@ void GalerkinMatrixBuilder::hypersingular_adjacent(bool swap, int der) throw() {
         hypersingular_der_interaction_matrix.setZero();
     if (der > 1)
         hypersingular_der2_interaction_matrix.setZero();
-    Eigen::ArrayXXcd h1_vnorm, cf;
-    Eigen::ArrayXXd temp, tdottp;
+    Eigen::ArrayXXcd h1_vnorm;
+    Eigen::ArrayXXd tdottp;
     for (K = 0; K < 2; ++K) {
         const auto &tangent_p = m_tangent_p[K], &tangent = m_tangent[K];
         const auto &h0 = m_h0[K];
@@ -575,14 +689,14 @@ void GalerkinMatrixBuilder::hypersingular_adjacent(bool swap, int der) throw() {
             h1_vnorm = m_h1[K] * v_norm;
         for (j = 0; j < Qtrial; ++j) {
             for (i = 0; i < Qtrial; ++i) {
-                cf = data.m_wa * (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg_arc.block(j * N, i * N, N, N)
-                                                : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
-                                       : (K > 0 ? data.m_hypersingular_adjacent_fg_arc_swap.block(j * N, i * N, N, N)
-                                                : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) -
-                    kkc * (temp = (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg.block(j * N, i * N, N, N)
-                                                 : data.m_hypersingular_adjacent_fg_swap.block(i * N, j * N, N, N))
-                                        : (K > 0 ? data.m_hypersingular_adjacent_fg_swap.block(j * N, i * N, N, N)
-                                                 : data.m_hypersingular_adjacent_fg.block(i * N, j * N, N, N))) * tdottp);
+                auto temp = (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg.block(j * N, i * N, N, N)
+                                           : data.m_hypersingular_adjacent_fg_swap.block(i * N, j * N, N, N))
+                                  : (K > 0 ? data.m_hypersingular_adjacent_fg_swap.block(j * N, i * N, N, N)
+                                           : data.m_hypersingular_adjacent_fg.block(i * N, j * N, N, N))) * tdottp;
+                auto cf = data.m_wa * (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg_arc.block(j * N, i * N, N, N)
+                                                     : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
+                                            : (K > 0 ? data.m_hypersingular_adjacent_fg_arc_swap.block(j * N, i * N, N, N)
+                                                     : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) - kkc * temp;
                 hypersingular_interaction_matrix(i, j) += (cf * masked1[0]).sum();
                 if (der > 0)
                     hypersingular_der_interaction_matrix(i, j) += mask.select(h1_vnorm * cf + ksqrtc * h0 * temp, m_zero).sum();
@@ -606,15 +720,14 @@ void GalerkinMatrixBuilder::hypersingular_general(int der) throw() {
     const auto &v_norm = m_v_norm_s, &v_norm2 = m_v_norm2_s;
     Eigen::ArrayXXd tdottp = 2.0 * (tangent.imag() * tangent_p.imag() + tangent.real() * tangent_p.real()) * data.m_wg;
     auto mask = ksqrtca * v_norm > epsilon;
-    Eigen::ArrayXXcd h1_vnorm, cf;
-    Eigen::ArrayXXd temp;
+    Eigen::ArrayXXcd h1_vnorm;
     masked1_s = mask.select(h0, (v_norm > epsilon).select(-M_2_PI * v_norm.log(), m_zero_s));
     if (der > 0)
         h1_vnorm = m_h1_s * v_norm;
     for (j = 0; j < Qtrial; ++j) {
         for (i = 0; i < Qtrial; ++i) {
-            cf = data.m_wg * data.m_hypersingular_general_fg_arc.block(i * N, j * N, N, N) -
-                kkc * (temp = data.m_hypersingular_general_fg.block(i * N, j * N, N, N) * tdottp);
+            auto temp = data.m_hypersingular_general_fg.block(i * N, j * N, N, N) * tdottp;
+            auto cf = data.m_wg * data.m_hypersingular_general_fg_arc.block(i * N, j * N, N, N) - kkc * temp;
             hypersingular_interaction_matrix(i, j) = (cf * masked1_s).sum();
             if (der > 0)
                 hypersingular_der_interaction_matrix(i, j) =
@@ -635,7 +748,7 @@ void GalerkinMatrixBuilder::single_layer_coinciding(int der) throw() {
     size_t i, j, K, N = data.getCGaussQROrder(), Qtest = data.getQtest();
     const auto &v_norm = m_v_norm[0];
     const auto &h0 = m_h0[0], &h1 = m_h1[0];
-    Eigen::ArrayXXd cf, ttp_norm = m_tangent_norm[0] * m_tangent_p_norm[0] * data.m_wc;
+    Eigen::ArrayXXd ttp_norm = m_tangent_norm[0] * m_tangent_p_norm[0] * data.m_wc;
     auto mask = ksqrtca * v_norm > epsilon;
     single_layer_interaction_matrix.setZero();
     masked1[0] = mask.select(h0, (v_norm > epsilon).select(-M_2_PI * v_norm.log(), m_zero));
@@ -658,7 +771,7 @@ void GalerkinMatrixBuilder::single_layer_coinciding(int der) throw() {
                         single_layer_der2_interaction_matrix(i, j) = single_layer_der2_interaction_matrix(j, i);
                     continue;
                 }
-                cf = ttp_norm * data.m_single_layer_coinciding_fg.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N);
+                auto cf = ttp_norm * data.m_single_layer_coinciding_fg.block((K > 0 ? j : i) * N, (K > 0 ? i : j) * N, N, N);
                 single_layer_interaction_matrix(i, j) += (cf * masked1[0]).sum();
                 if (der > 0)
                     single_layer_der_interaction_matrix(i, j) += (cf * masked2[0]).sum();
@@ -681,7 +794,7 @@ void GalerkinMatrixBuilder::single_layer_adjacent(bool swap, int der) throw() {
         single_layer_der_interaction_matrix.setZero();
     if (der > 1)
         single_layer_der2_interaction_matrix.setZero();
-    Eigen::ArrayXXd ttp_norm, cf;
+    Eigen::ArrayXXd ttp_norm;
     for (K = 0; K < 2; ++K) {
         const auto &v_norm = m_v_norm[K];
         const auto &h0 = m_h0[K], &h1 = m_h1[K];
@@ -694,10 +807,10 @@ void GalerkinMatrixBuilder::single_layer_adjacent(bool swap, int der) throw() {
         ttp_norm = m_tangent_norm[K] * m_tangent_p_norm[K] * data.m_wa;
         for (j = 0; j < Qtest; ++j) {
             for (i = 0; i < Qtest; ++i) {
-                cf = ttp_norm * (swap ? (K > 0 ? data.m_single_layer_adjacent_fg.block(j * N, i * N, N, N)
-                                               : data.m_single_layer_adjacent_fg_swap.block(i * N, j * N, N, N))
-                                      : (K > 0 ? data.m_single_layer_adjacent_fg_swap.block(j * N, i * N, N, N)
-                                               : data.m_single_layer_adjacent_fg.block(i * N, j * N, N, N)));
+                auto cf = ttp_norm * (swap ? (K > 0 ? data.m_single_layer_adjacent_fg.block(j * N, i * N, N, N)
+                                                    : data.m_single_layer_adjacent_fg_swap.block(i * N, j * N, N, N))
+                                           : (K > 0 ? data.m_single_layer_adjacent_fg_swap.block(j * N, i * N, N, N)
+                                                    : data.m_single_layer_adjacent_fg.block(i * N, j * N, N, N)));
                 single_layer_interaction_matrix(i, j) += (cf * masked1[K]).sum();
                 if (der > 0)
                     single_layer_der_interaction_matrix(i, j) += (cf * masked2[K]).sum();
@@ -717,7 +830,7 @@ void GalerkinMatrixBuilder::single_layer_general(int der) throw() {
     size_t i, j, N = data.getGaussQROrder(), Qtest = data.getQtest();
     const auto &v_norm = m_v_norm_s;
     const auto &h0 = m_h0_s, &h1 = m_h1_s;
-    Eigen::ArrayXXd cf, ttp_norm = m_tangent_norm_s * m_tangent_p_norm_s * data.m_wg;
+    Eigen::ArrayXXd ttp_norm = m_tangent_norm_s * m_tangent_p_norm_s * data.m_wg;
     auto mask = ksqrtca * v_norm > epsilon;
     masked1_s = mask.select(h0, (v_norm > epsilon).select(-M_2_PI * v_norm.log(), m_zero_s));
     if (der > 0)
@@ -726,7 +839,7 @@ void GalerkinMatrixBuilder::single_layer_general(int der) throw() {
         masked3_s = mask.select((h1 / ksqrtc - h0 * v_norm) * v_norm, m_zero_s);
     for (j = 0; j < Qtest; ++j) {
         for (i = 0; i < Qtest; ++i) {
-            cf = ttp_norm * data.m_single_layer_general_fg.block(i * N, j * N, N, N);
+            auto cf = ttp_norm * data.m_single_layer_general_fg.block(i * N, j * N, N, N);
             single_layer_interaction_matrix(i, j) = (cf * masked1_s).sum();
             if (der > 0)
                 single_layer_der_interaction_matrix(i, j) = (cf * masked2_s).sum();
@@ -752,8 +865,8 @@ void GalerkinMatrixBuilder::all_coinciding(int der) throw() {
     auto mask2 = v_norm > epsilon;
     masked1[0] = mask.select(ksqrtc * h1 / v_norm, mask2.select(M_2_PI / v_norm2, m_zero));
     Eigen::ArrayXXcd masked1_hg = mask.select(h0, mask2.select(-M_2_PI * v_norm.log(), m_zero));
-    Eigen::ArrayXXcd masked2_g, masked3_g, cf;
-    Eigen::ArrayXXd temp, vdotn, cfr1, cfr2;
+    Eigen::ArrayXXcd masked2_g, masked3_g;
+    Eigen::ArrayXXd vdotn;
     double_layer_interaction_matrix.setZero();
     hypersingular_interaction_matrix.setZero();
     single_layer_interaction_matrix.setZero();
@@ -775,6 +888,8 @@ void GalerkinMatrixBuilder::all_coinciding(int der) throw() {
         vdotn = (K * 2 - 1.) * data.m_wc * (K == 0 ? m_tangent_norm : m_tangent_p_norm)[0] *
             (v.imag() * (K == 0 ? tangent_p : tangent).real() - v.real() * (K == 0 ? tangent_p : tangent).imag());
         const Eigen::ArrayXXd &fg = K == 0 ? data.m_double_layer_coinciding_fg : data.m_double_layer_coinciding_fg_t;
+        Eigen::ArrayXXcd cf;
+        Eigen::ArrayXXd temp, cfr1, cfr2;
         for (j = 0; j < Q; ++j) {
             for (i = 0; i < Q; ++i) {
                 cfr1 = vdotn * fg.block(i * N, j * N, N, N);
@@ -833,7 +948,7 @@ void GalerkinMatrixBuilder::all_coinciding(int der) throw() {
 }
 
 void GalerkinMatrixBuilder::all_adjacent(bool swap, int der) throw() {
-    size_t i, j, K, N = data.getCGaussQROrder(), Q = data.getQtest();
+    size_t K, N = data.getCGaussQROrder(), Q = data.getQtest();
     double_layer_interaction_matrix.setZero();
     hypersingular_interaction_matrix.setZero();
     single_layer_interaction_matrix.setZero();
@@ -847,8 +962,7 @@ void GalerkinMatrixBuilder::all_adjacent(bool swap, int der) throw() {
         hypersingular_der2_interaction_matrix.setZero();
         single_layer_der2_interaction_matrix.setZero();
     }
-    Eigen::ArrayXXcd masked2_g, masked3_g, cf;
-    Eigen::ArrayXXd temp, cfr1, cfr2, cfr3;
+    Eigen::ArrayXXcd masked2_g, masked3_g;
     for (K = 0; K < 2; ++K) {
         const auto &tangent_p = m_tangent_p[K], &tangent = m_tangent[K];
         const auto &v = m_v[K];
@@ -871,26 +985,28 @@ void GalerkinMatrixBuilder::all_adjacent(bool swap, int der) throw() {
         }
         const Eigen::ArrayXXd &fg = swap ? (K == 1 ? data.m_double_layer_adjacent_fg_swap_t : data.m_double_layer_adjacent_fg_swap)
                                          : (K == 1 ? data.m_double_layer_adjacent_fg_t : data.m_double_layer_adjacent_fg);
-        for (j = 0; j < Q; ++j) {
-            for (i = 0; i < Q; ++i) {
+        Eigen::ArrayXXcd cf;
+        Eigen::ArrayXXd temp, cfr1, cfr2, cfr3;
+        for (size_t j = 0; j < Q; ++j) {
+            for (size_t i = 0; i < Q; ++i) {
                 cfr1 = vdotn * fg.block(i * N, j * N, N, N);
                 cfr2 = ttp_norm * (swap ? (K > 0 ? data.m_single_layer_adjacent_fg.block(j * N, i * N, N, N)
-                                                 : data.m_single_layer_adjacent_fg_swap.block(i * N, j * N, N, N))
+                                                : data.m_single_layer_adjacent_fg_swap.block(i * N, j * N, N, N))
                                         : (K > 0 ? data.m_single_layer_adjacent_fg_swap.block(j * N, i * N, N, N)
-                                                 : data.m_single_layer_adjacent_fg.block(i * N, j * N, N, N)));
+                                                : data.m_single_layer_adjacent_fg.block(i * N, j * N, N, N)));
                 temp = (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg.block(j * N, i * N, N, N)
-                                      : data.m_hypersingular_adjacent_fg_swap.block(i * N, j * N, N, N))
-                             : (K > 0 ? data.m_hypersingular_adjacent_fg_swap.block(j * N, i * N, N, N)
-                                      : data.m_hypersingular_adjacent_fg.block(i * N, j * N, N, N))) * tdottp;
+                                    : data.m_hypersingular_adjacent_fg_swap.block(i * N, j * N, N, N))
+                            : (K > 0 ? data.m_hypersingular_adjacent_fg_swap.block(j * N, i * N, N, N)
+                                    : data.m_hypersingular_adjacent_fg.block(i * N, j * N, N, N))) * tdottp;
                 if (k_real_positive)
                     cfr3 = data.m_wa * (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg_arc.block(j * N, i * N, N, N)
-                                                      : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
-                                             : (K > 0 ? data.m_hypersingular_adjacent_fg_arc_swap.block(j * N, i * N, N, N)
-                                                      : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) - kkc.real() * temp;
-                else cf = data.m_wa * (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg_arc.block(j * N, i * N, N, N)
-                                                     : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
+                                                    : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
                                             : (K > 0 ? data.m_hypersingular_adjacent_fg_arc_swap.block(j * N, i * N, N, N)
-                                                     : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) - kkc * temp;
+                                                    : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) - kkc.real() * temp;
+                else cf = data.m_wa * (swap ? (K > 0 ? data.m_hypersingular_adjacent_fg_arc.block(j * N, i * N, N, N)
+                                                    : data.m_hypersingular_adjacent_fg_arc_swap.block(i * N, j * N, N, N))
+                                            : (K > 0 ? data.m_hypersingular_adjacent_fg_arc_swap.block(j * N, i * N, N, N)
+                                                    : data.m_hypersingular_adjacent_fg_arc.block(i * N, j * N, N, N))) - kkc * temp;
                 double_layer_interaction_matrix(i, j) += (cfr1 * masked1[K]).sum();
                 single_layer_interaction_matrix(i, j) += (cfr2 * masked1_hg).sum();
                 if (k_real_positive)
@@ -926,7 +1042,7 @@ void GalerkinMatrixBuilder::all_adjacent(bool swap, int der) throw() {
 }
 
 void GalerkinMatrixBuilder::all_general(int der) throw() {
-    size_t i, j, N = data.getGaussQROrder(), Q = data.getQtest();
+    size_t N = data.getGaussQROrder(), Q = data.getQtest();
     Eigen::ArrayXXd ttp_norm = m_tangent_norm_s * m_tangent_p_norm_s * data.m_wg;
     Eigen::ArrayXXd tdottp = 2.0 * (m_tangent_s.imag() * m_tangent_p_s.imag() + m_tangent_s.real() * m_tangent_p_s.real()) * data.m_wg;
     auto mask = ksqrtca * m_v_norm_s > epsilon;
@@ -934,8 +1050,7 @@ void GalerkinMatrixBuilder::all_general(int der) throw() {
     masked1_s = mask.select(ksqrtc * m_h1_s / m_v_norm_s, mask2.select(M_2_PI / m_v_norm2_s, m_zero_s));
     Eigen::ArrayXXcd masked1_hg = mask.select(m_h0_s, mask2.select(-M_2_PI * m_v_norm_s.log(), m_zero_s));
     Eigen::ArrayXXd vdotn = data.m_wg * (m_v_s.real() * m_tangent_p_s.imag() - m_v_s.imag() * m_tangent_p_s.real()) * m_tangent_norm_s;
-    Eigen::ArrayXXcd masked2_g, masked3_g, cf;
-    Eigen::ArrayXXd temp, cfr1, cfr2, cfr3;
+    Eigen::ArrayXXcd masked2_g, masked3_g;
     if (der > 0) {
         masked2_s = mask.select(m_h0_s, m_zero_s);
         masked2_g = mask.select(m_h1_s * m_v_norm_s, m_zero_s);
@@ -944,8 +1059,10 @@ void GalerkinMatrixBuilder::all_general(int der) throw() {
         masked3_s = masked2_s - ksqrtc * masked2_g;
         masked3_g = masked2_g / ksqrtc - masked2_s * m_v_norm2_s;
     }
-    for (j = 0; j < Q; ++j) {
-        for (i = 0; i < Q; ++i) {
+    Eigen::ArrayXXcd cf;
+    Eigen::ArrayXXd temp, cfr1, cfr2, cfr3;
+    for (size_t j = 0; j < Q; ++j) {
+        for (size_t i = 0; i < Q; ++i) {
             cfr1 = vdotn * data.m_double_layer_general_fg.block(i * N, j * N, N, N);
             cfr2 = ttp_norm * data.m_single_layer_general_fg.block(i * N, j * N, N, N);
             temp = data.m_hypersingular_general_fg.block(i * N, j * N, N, N) * tdottp;
@@ -988,7 +1105,7 @@ void GalerkinMatrixBuilder::all_general(int der) throw() {
 // initialize wavenumber and refraction index with related values
 void GalerkinMatrixBuilder::initialize_parameters(const std::complex<double>& k_in, double c_in) {
     if (c_in < 1.)
-        throw std::runtime_error("Refraction index must not be smaller than 1!");
+        throw std::runtime_error("Refraction index must not be smaller than 1");
     k = k_in;
     c = c_in;
     sqrtc = sqrt(c);
@@ -1176,7 +1293,7 @@ void GalerkinMatrixBuilder::assembleSingleLayer(const std::complex<double>& k_in
 
 void GalerkinMatrixBuilder::assembleAll(const std::complex<double>& k_in, double c_in, int der) {
     if (!data.testTrialSpacesAreEqual())
-        throw std::runtime_error("Trial and test spaces must be equal!");
+        throw std::runtime_error("Trial and test spaces must be equal");
     initialize_parameters(k_in, c_in);
     single_layer_matrix.setZero();
     double_layer_matrix.setZero();
@@ -1286,7 +1403,7 @@ const Eigen::MatrixXcd & GalerkinMatrixBuilder::getDoubleLayer(int der) const {
         return double_layer_der_matrix;
     if (der == 2)
         return double_layer_der2_matrix;
-    throw std::runtime_error("Invalid order of derivative!");
+    throw std::runtime_error("Invalid order of derivative");
 }
 
 const Eigen::MatrixXcd & GalerkinMatrixBuilder::getHypersingular(int der) const {
@@ -1296,7 +1413,7 @@ const Eigen::MatrixXcd & GalerkinMatrixBuilder::getHypersingular(int der) const 
         return hypersingular_der_matrix;
     if (der == 2)
         return hypersingular_der2_matrix;
-    throw std::runtime_error("Invalid order of derivative!");
+    throw std::runtime_error("Invalid order of derivative");
 }
 
 const Eigen::MatrixXcd & GalerkinMatrixBuilder::getSingleLayer(int der) const {
@@ -1306,7 +1423,7 @@ const Eigen::MatrixXcd & GalerkinMatrixBuilder::getSingleLayer(int der) const {
         return single_layer_der_matrix;
     if (der == 2)
         return single_layer_der2_matrix;
-    throw std::runtime_error("Invalid order of derivative!");
+    throw std::runtime_error("Invalid order of derivative");
 }
 
 unsigned int GalerkinMatrixBuilder::getInteractionMatrixAssemblyTime() {

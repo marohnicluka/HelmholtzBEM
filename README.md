@@ -1,12 +1,13 @@
 # Helmholtz Transmission Problem BEM with randomized SVD
 ## Introduction
-This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by Diego Renner, with the following improvements:
+This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by [Diego Renner](https://github.com/DiegoRenner), with the following improvements:
 
 - The code is upgraded to the C++17 standard. The typedef <tt>data</tt> was replaced by <tt>grid_data</tt> because it clashed with <tt>std::data</tt>.
-- The new dependency is the Intel <tt>tbb</tt> library for parallelization, which is supported by GCC.
-- Linking to [complex_bessel](https://github.com/joeydumont/complex_bessel) library is rendered obsolete since this code includes routines for computing Bessel functions written from scratch in C++, following the same theoretical ideas as presented in two papers by Donald E. Amos (1983). The new code, contained in <tt>cbessel.cpp</tt>, is faster than the Fortran code (it has been extensively tested against the latter) and is optimized for order 0 and 1 as well as for the case of real argument.
-- Significant performance improvements are made to the process of assembling the solution matrix and the respective derivatives by using parallelization and by removing duplicate computation.
-- The main contribution is an implementation of randomized SVD following the algorithm presented in [this paper](https://arxiv.org/abs/0909.4061). The corresponding routine called <tt>randomized_svd::sv</tt> approximates the smallest singular value of the solution matrix by using this technique.
+- The new dependencies are the Intel <tt>tbb</tt> library for parallelization, which is supported by GCC, and the <tt>gsl</tt> library which provides the spline interpolation routines used in trace approximation.
+- Linking to [complex_bessel](https://github.com/joeydumont/complex_bessel) library is not needed anymore. The routines for computing Bessel functions are implemented from scratch in C++ using the theoretical background presented in two papers by Donald E. Amos (1983).
+- Significant speedups are achieved in the routine for assembling solution matrices and their derivatives, mostly by removing duplicate computations.
+- A randomized SVD algorithm was implemented following the ideas in [this paper](https://arxiv.org/abs/0909.4061). The corresponding routine called <tt>randomized_svd::sv</tt> approximates the smallest singular value of the solution matrix by using this technique.
+- Solution of the Helmholtz transmission problem can be plotted for an arbitrary polygonal scatterer and for several types of incoming waves. 
 
 ## Configuration and Dependencies
 The library can be configured by running 
@@ -37,15 +38,13 @@ ninja
 ~~~
 from the <tt>build</tt> directory (or by issuing the build step in Kdevelop).
 
-~~The [complex_bessel library](https://github.com/joeydumont/complex_bessel)
-that is used for passing complex arguments to the Hankel and Bessel functions 
-as well as~~ the [arpackpp library](https://github.com/m-reuter/arpackpp) which gives a <tt>c++</tt> interface to the [arpack library](https://github.com/opencollab/arpack-ng) are installed automatically and don't need to be built.
-<tt>arpack</tt>, <tt>lapack</tt> and <tt>tbb</tt> need to be installed separately and can usually be done so with your distributions packagemanager.
+The [arpackpp library](https://github.com/m-reuter/arpackpp) which gives a <tt>c++</tt> interface to the [arpack library](https://github.com/opencollab/arpack-ng) is installed automatically. <tt>arpack</tt>, <tt>lapack</tt>, [<tt>gsl</tt>](https://www.gnu.org/software/gsl/) and <tt>tbb</tt> need to be installed separately and can usually be done so with your distributions packagemanager.
 
 For <tt>arch</tt> based distros:
 ~~~
 sudo pacman -S arpack
 sudo pacman -S lapack
+sudo pacman -S gsl
 sudo pacman -S tbb2020
 ~~~
 For <tt>debian</tt> based distros:
@@ -53,6 +52,7 @@ For <tt>debian</tt> based distros:
 sudo apt install libboost-all-dev
 sudo apt install libarpack2-dev 
 sudo apt install liblapack3-dev
+sudo apt install libgsl-dev
 sudo apt install libtbb-dev
 ~~~
 
@@ -88,9 +88,9 @@ pacman -Syu
 to update the system. You may be asked to relaunch the <tt>MINGW64</tt> terminal.
 
 #### Installing necessary packages
-Open the <tt>MSYS2 MINGW64</tt> terminal from the Windows Start menu if it's not already running. To install the required packages, enter
+To install dependencies, copy the following command to the <tt>MINGW64</tt> terminal:
 ~~~
-pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
+pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-gsl mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
 ~~~
 Next, add a symbolic link to the <tt>tbb</tt> shared library by issuing the command
 ~~~
@@ -143,7 +143,7 @@ ninja
 
 ## Usage
 We will show how the built targets are to be used.
-We commonly refer to the wavenumber by k.
+We commonly refer to the wavenumber by $k$.
 
 #### <tt>doxygen_HelmholtzTransmissionProblemBEM</tt>
 This target generates a documentation of the library in the <tt>doxygen/generated_doc</tt> directory.
@@ -471,7 +471,17 @@ This target builds a script that computes minimas in the smallest singular value
 <#grid points for root search> <#panels> <order of quadrature rule>
 <accuracy of Arnoldi algorithm> <number of subspace iterations>
 ~~~
-The resulting file will contain the local minima in a single column. The singular values are computed using the Arnoldi algorithm. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
+The resulting file will contain the local minima in a single column. The singular values are computed using the randomized SVD algorithm with the specified number of subspace iterations. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
+
+#### <tt>roots_newton_polygon_rsvd</tt>
+This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using the Newton-Raphson method. The scatterer is a polygon read from disk (see <tt>scatterer.hpp</tt> for a description of the input file syntax). The results are written to the <tt>data</tt> directory. The script can be run as follows:
+~~~
+/path/to/roots_newton_square_rsvd \<scatterer filename\>
+    \<refraction inside\> \<refraction outside\> \<initial wavenumber\> 
+    \<\#grid points for root search\> \<\#panels\> \<quadrature order\> 
+    \<accuracy\> \<#subspace iterations\>
+~~~
+The resulting file will contain the local minima in a single column. The singular values are computed using the randomized SVD algorithm with the specified number of subspace iterations. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 #### <tt>roots_seq_circle_arnoldi</tt>
 This target builds a script that computes minimas in the smallest singular value of the
@@ -686,28 +696,35 @@ The first will contain the current panel size.
 The second will contain the residual error in the euclidean norm of the computed FEM-space interpolation coefficients to the known FEM-space interpolation coefficients for the current number of panels.
 The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
-#### <tt>plot_solution_square</tt>
+#### <tt>plot_solution_polygon</tt>
 
 This target builds a script that solves the
 Helmholtz transmission problem and outputs the gnuplot file.
-The scatterer is set to be a square. The results are
+The scatterer and incoming wave are read from disk. The results are
 written to the <tt>data</tt> directory.
 The script can be run as follows:
 ~~~
-/path/to/plot_solution_square <side length of the square>
-    <refraction inside> <refraction outside> <wavenumber>
-    <#panels> <grid size> <order of quadrature rule> <angle>.
+/path/to/plot_solution_polygon \<scatterer file\>
+    \<incoming wave file\> \<refraction inside\> \<refraction outside\> 
+    \<wavenumber\> \<#panels\> \<quadrature order\> \<grid size\>
+    \<lower left x\> \<lower left y\> \<upper right x\> \<upper right x\> 
+    \<mode\> \<intensity\>
 ~~~
+* The first two input arguments are paths to text files. For scatterer/incoming wave file syntax see the corresponding header files <tt>scatterer.hpp</tt> and <tt>incoming.hpp</tt>.
+* <tt>quadrature order</tt> refers to computing the Green indentity integrals when lifting the solution from traces.
+* <tt>grid size</tt> is the number of points sampled at each side of the rectangular drawing area, which is specified by its lower left and upper right corners (the next four input arguments).
+* <tt>mode</tt> is an integer from 0 to 5, where 0/3, 1/4 and 2/5 specify the default drawing mode, animation and amplitude map, respectively, and include the incoming wave if <tt>mode</tt> is greater than 2.
+* <tt>intensity</tt> is a positive real number which controls color intensity of the heat map (1.0 is the default intensity).
 
-This target produces a gnuplot script which plots the solution inside
-the square. If wavenumber is not positive, the script creates a
-series of PNG images for k varying from 1.0 to 10.0. The following
-commandline produces an animation out of these images (note that it
-should be run from the <tt>data</tt> directory):
+The following commandline produces an animation out of these images (note that it should be run from the <tt>data</tt> directory):
 ~~~
-convert -delay 20 -loop 0 img/file_plot_solution_square_XXXX_*.png
+convert -delay 4 -loop 0 img/file_plot_solution_square_XXXX_*.png
     output.gif
 ~~~
-The user will be updated through the command line about the
-progress of the algorithm if <tt>CMDL</tt> is set.
+The user will be updated through the comma	nd line about the
+progress of the algorithm if <tt>-DCMDL</tt> is set.
 
+## Acknowledgements
+This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).
+
+<center><img src='figures/hrzz-logo.png' width='100'></center>

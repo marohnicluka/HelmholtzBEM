@@ -17,6 +17,8 @@
 
 typedef std::complex<double> complex_t;
 
+void parallelize_builder(bool yes);
+
 class BuilderData
 {
     // panel vector

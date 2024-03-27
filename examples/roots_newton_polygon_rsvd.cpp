@@ -50,10 +50,14 @@ complex_t ii = complex_t(0,1.);
 int main(int argc, char** argv) {
 
     // check whether we have the correct number of input arguments
-    if (argc < 10)
-        throw std::runtime_error("Too few input arguments!");
-    if (argc > 10)
-        throw std::runtime_error("Too many input arguments!");
+    if (argc < 10) {
+        std::cerr << "Error: too few input arguments!" << std::endl;
+        return 1;
+    }
+    if (argc > 10) {
+        std::cerr << "Error: too many input arguments" << std::endl;
+        return 1;
+    }
 
     // define the side of square, refraction index and initial wavenumber
     double c_i = atof(argv[2]);
@@ -66,7 +70,7 @@ int main(int argc, char** argv) {
     string fname_scatterer = argv[1];
     Eigen::VectorXd poly_x, poly_y;
     if (!read_polygon(fname_scatterer, poly_x, poly_y)) {
-        std::cerr << "Failed to read scatterer from file" << std::endl;
+        std::cerr << "Error: failed to read scatterer from file" << std::endl;
         return 1;
     }
     // construction of a ParametrizedMesh object from the vector of panels

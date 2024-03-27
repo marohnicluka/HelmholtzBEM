@@ -1,7 +1,18 @@
 /**
  * \file incoming.hpp
  *
- * \brief This is a C++ library of incoming waves that satisfy Delta u + k^2 u = 0.
+ * \brief This is a C++ library of incoming waves that satisfy
+ * Delta u + k^2 u = 0. The input file syntax (CSV) is described below.
+ * Each line should be one of the following:
+ *  - Plane, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<angle(rad)\>
+ *  - CircularJ, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<order\>
+ *  - CircularY, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<order\>
+ *  - FourierHankel1, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<order\>
+ *  - FourierHankel2, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<order\>
+ *  - Herglotz, \<amplitude\>, \<x0_1\>, \<x0_2\>, \<angle(rad)\>, \<eps\>
+ * The lines starting with '#' are ignored. Empty lines and extra spaces
+ * are discarded. The incoming wave is obtained by summing the solutions
+ * specified in the file.
  *
  * (c) 2024 Luka Marohnić
  */
@@ -43,7 +54,7 @@ namespace incoming {
     /**
      * This function computes incoming wave as a
      * linear combination of waves specified in spec
-     * and wavenumber k at x
+     * and wavenumber k at x.
      *
      * @param w wave specification
      * @param x real 2d vector
@@ -55,7 +66,7 @@ namespace incoming {
 
     /**
      * This function computes the plane wave with
-     * direction d and wavenumber k at x
+     * direction d and wavenumber k at x.
      *
      * u(x) = exp(i*k*dot(x,d))
      *
@@ -69,7 +80,7 @@ namespace incoming {
 
     /**
      * This function computes the circular besselJ
-     * wave with order l and wavenumber k at x
+     * wave with order l and wavenumber k at x.
      *
      * u(x) = J(l,k*r)*exp(i*l*theta),
      * x = (r*cos(theta), r*sin(theta))
@@ -80,11 +91,11 @@ namespace incoming {
      */
     complex_t circular_J(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
     // gradient
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr = NULL);
 
     /**
      * This function computes the circular besselY
-     * wave with order l and wavenumber k at x
+     * wave with order l and wavenumber k at x.
      *
      * u(x) = Y(l,k*r)*exp(i*l*theta),
      * x = (r*cos(theta), r*sin(theta))
@@ -95,11 +106,11 @@ namespace incoming {
      */
     complex_t circular_Y(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
     // gradient
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr = NULL);
 
     /**
      * This function computes the Fourier-Hankel
-     * wave with order l and wavenumber k at x
+     * wave with order l and wavenumber k at x.
      *
      * u(x) = (J(l,k*r) +- i*Y(l,k*r)) * exp(i*l*theta),
      * x = (r*cos(theta), r*sin(theta))
@@ -111,11 +122,11 @@ namespace incoming {
      */
     complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k);
     // gradient
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k);
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k, complex_t *ddr = NULL);
 
     /**
      * This function computes the Herglotz ray wave
-     * with direction d, diameter eps and wavenumber k at x
+     * with direction d, diameter eps and wavenumber k at x.
      *
      * u(x) = integral(exp(i*k*(x1*cos(t)+x2*sin(t))), t=theta-eps..theta+eps),
      * theta = atan2(x2, x1)

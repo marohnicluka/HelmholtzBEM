@@ -2,7 +2,14 @@
  * \file scatterer.hpp
  *
  * \brief This is a C++ library of utilities for
- * handling the scatterer object.
+ * handling the scatterer object. The input file
+ * syntax (CSV) is described below.
+ * Each line of the input file specifies a vertex
+ * of the scatterer. A vertex is specified as a
+ * pair xk,yk. Vertices should be sorted in
+ * counter-clockwise order.
+ * Lines starting with '#' are ignored. Empty lines
+ * and extra spaces are discarded.
  *
  * (c) 2024 Luka Marohnić
  */

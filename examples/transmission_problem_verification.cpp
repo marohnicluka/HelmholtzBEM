@@ -9,8 +9,7 @@
  * <tt>
  * /path/to/transmission_problem_verification \<radius of circle\>
  *      \<\#coeffs for series expansion of solution\> \<refraction inside\>
- *      \<refraction outside\> \<wavenumber\>
- *      \<order of quadrature rule\> \<outputfile\>
+ *      \<refraction outside\> \<wavenumber\> \<order of quadrature rule\>
  * </tt>
  * This output file will contain two columns.
  * The first will contain the current panel size.

@@ -18,7 +18,7 @@ using namespace std::chrono;
 
 typedef std::complex<double> complex_t;
 
-SolutionsOperator::SolutionsOperator(const BuilderData &builder_data_in, bool profiling_in)
+SolutionsOperator::SolutionsOperator(const BuilderData &builder_data_in, bool profiling_in, bool enable_projection)
 : builder_data(builder_data_in)
 {
     dim_test = builder_data.getTestSpaceDimension();
@@ -27,14 +27,17 @@ SolutionsOperator::SolutionsOperator(const BuilderData &builder_data_in, bool pr
     profiling = profiling_in;
     // assemble mass matrix
     M = mass_matrix::GalerkinMatrix(builder_data.mesh, builder_data.trial_space, builder_data.test_space, builder_data.GaussQR);
-    // compute matrix for projection onto ortogonal FEM-spaces
-    Eigen::MatrixXd A;
-    A.setZero(dim, dim);
-    A.block(0, 0, dim_test, dim_trial) = M;
-    A.block(dim_test, dim_trial, dim_trial, dim_test) = M.transpose().eval();
-    Eigen::LDLT<Eigen::MatrixXd> llt(A);
-    lu = Eigen::PartialPivLU<Eigen::MatrixXcd>
-        (llt.transpositionsP().transpose() * llt.matrixL().toDenseMatrix() * llt.vectorD().cwiseSqrt().asDiagonal());
+    projection_enabled = enable_projection;
+    if (projection_enabled) {
+        // compute matrix for projection onto ortogonal FEM-spaces
+        Eigen::MatrixXd A;
+        A.setZero(dim, dim);
+        A.block(0, 0, dim_test, dim_trial) = M;
+        A.block(dim_test, dim_trial, dim_trial, dim_test) = M.transpose().eval();
+        Eigen::LDLT<Eigen::MatrixXd> llt(A);
+        lu = Eigen::PartialPivLU<Eigen::MatrixXcd>
+            (llt.transpositionsP().transpose() * llt.matrixL().toDenseMatrix() * llt.vectorD().cwiseSqrt().asDiagonal());
+    }
 }
 
 SolutionsOperator::~SolutionsOperator() {
@@ -62,6 +65,7 @@ SolutionsOperator::~SolutionsOperator() {
 }
 
 Eigen::MatrixXcd SolutionsOperator::project(const Eigen::MatrixXcd &T) const {
+    assert(projection_enabled);
     return lu.solve(lu.solve(T).transpose().eval()).transpose().eval();
 }
 
