@@ -9,7 +9,7 @@ This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.c
 - A randomized SVD algorithm was implemented following the ideas in [this paper](https://arxiv.org/abs/0909.4061). The corresponding routine called <tt>randomized_svd::sv</tt> approximates the smallest singular value of the solution matrix by using this technique.
 - Solution of the Helmholtz transmission problem can be plotted for an arbitrary polygonal scatterer and for several types of incoming waves.
 
-We will appreciate if users of this library cite the paper [[1]](#1) in their work.
+We will appreciate it if users of this library were to cite the paper [[1]](#1) in their work.
 
 ## Configuration and Dependencies
 The library can be configured by running 
