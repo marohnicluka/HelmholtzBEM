@@ -152,7 +152,7 @@ The documentation can be browsed using any common browser.
 #### <tt>debugging_SVs</tt>
 This target builds a script that computes the Eigenvalues of the BIO for Helmholtz Transmission Problem. The results are written to file. The script can be run as follows:
 ~~~
- /path/to/debugging_SVs
+/path/to/debugging_SVs
 ~~~
 The output file will contain a section for each set mesh resolution and each of those sections will contain one section each for every BIO where all Eigenvalues for different wavenumbers will be listed in columns. The Eigenvalues are computed using the facts stated in Lemma 3.22. [TODO: find reference]
 
@@ -160,44 +160,44 @@ The output file will contain a section for each set mesh resolution and each of 
 This target builds a script that computes the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows: 
 ~~~
 /path/to/direct_v_arnoldi <radius of circle>
-    <number of SVs to be computed> <accurracy of Arnoldi algorithm>
+    <#SVs to be computed> <accurracy of Arnoldi algorithm>
 ~~~
- The script will generate four files: file_vals_eig_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_vals_arpp_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_timings_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat, file_iter_<number of SVs to be computed>_<accurracy of arnoldi algorithm>.dat. These will contain the SVs computed using the direct solver, the SVs computed using the Arnoldi algorithm, the time taken by the direct solver and the Arnoldi algorithm, and the number of iterations the Arnoldi algorithm took to converge respectively.
+ The script will generate four files: <tt>file_vals_eig_<#SVs to be computed>\_\<accurracy of arnoldi algorithm\>.dat</tt>, <tt>file_vals_arpp\_<#SVs to be computed>\_\<accurracy of arnoldi algorithm\>.dat</tt>, <tt>file_timings_<#SVs to be computed>\_\<accurracy of arnoldi algorithm\>.dat</tt>, <tt>file_iter_<#SVs to be computed>_\<accurracy of arnoldi algorithm\>.dat</tt>. These will contain the SVs computed using the direct solver, the SVs computed using the Arnoldi algorithm, the time taken by the direct solver and the Arnoldi algorithm, and the number of iterations the Arnoldi algorithm took to converge respectively.
+
 #### <tt>direct_v_arnoldi_1st_der</tt>
 This target builds a script that computes the first derivative of the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows: 
 ~~~
 /path/to/direct_v_arnoldi_1st_der <radius of circle>
-    <number of SV derivatives to be computed>
-    <accurracy of Arnoldi algorithm>
+    <#SV derivatives to be computed> <accurracy of Arnoldi algorithm>
 ~~~
- The script will generate four files:
- file_vals_eig_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_1stDer.dat,
- file_vals_arpp_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_1stDer.dat,
- file_timings_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_1stDer.dat,
- file_iter_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_1stDer.dat.
+The script will generate four files:
+<tt>file_vals_eig_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_1stDer.dat</tt>,
+<tt>file_vals_arpp_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_1stDer.dat</tt>,
+<tt>file_timings_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_1stDer.dat</tt>,
+<tt>file_iter_<#SV derivatives to be computed>_\<accurracy of arnoldi algorithm\>_1stDer.dat</tt>.
  These will contain the derivatives computed using the direct solver,
  the derivatives computed using the Arnoldi algorithm,
  the time taken by the direct solver and the Arnoldi algorithm,
  and the number of iterations the Arnoldi algorithm took to converge respectively.
 
 #### <tt>direct_v_arnoldi_2nd_der</tt>
-This target builds a script that computes the second derivative of the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows: <tt> /path/to/direct_v_arnoldi_2nd_der <radius of circle> <number of SV derivatives to be computed> <accurracy of arnoldi algorithm>. </tt> The script will generate four files: file_vals_eig_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_2ndDer.dat, file_vals_arpp_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_2ndDer.dat, file_timings_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_2ndDer.dat, file_iter_<number of SV derivatives to be computed>_<accurracy of arnoldi algorithm>_2ndDer.dat. These will contain the derivatives computed using the direct solver, the derivatives computed using the Arnoldi algorithm, the time taken by the direct solver and the Arnoldi algorithm, and the number of iterations the Arnoldi algorithm took to converge respectively.
+This target builds a script that computes the second derivative of the singular values of the Galerkin BEM approximated BIO for the second-kind direct BIEs of the Helmholtz transmission problem, once using the Arnoldi algorithm and once using s direct solver. The scatterer is set to be a circle. The results are written to file. The script can be run as follows:
+~~~
+/path/to/library/bin/direct_v_arnoldi_2nd_der <radius of circle>
+    <#SV derivatives to be computed> <accurracy of arnoldi algorithm>
+~~~
+The script will generate four files: <tt>file_vals_eig_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_2ndDer.dat</tt>, <tt>file_vals_arpp_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_2ndDer.dat</tt>, <tt>file_timings_<#SV derivatives to be computed>\_\<accurracy of arnoldi algorithm\>\_2ndDer.dat</tt>, <tt>file_iter_<#SV derivatives to be computed>_\<accurracy of arnoldi algorithm\>_2ndDer.dat</tt>. These will contain the derivatives computed using the direct solver, the derivatives computed using the Arnoldi algorithm, the time taken by the direct solver and the Arnoldi algorithm, and the number of iterations the Arnoldi algorithm took to converge respectively.
 
 #### <tt>dirichlet_example</tt>
-This target builds a script that computes the solution to a Dirichlet problem
-using first kind direct BIEs.
-No command line parameters are necessary.
-Once built the script can be run as follows: 
+This target builds a script that computes the solution to a Dirichlet problem using first kind direct BIEs. No command line parameters are necessary. Once built the script can be run as follows: 
 ~~~
-/path/to/library/bin/dirichlet_example.
+/path/to/library/bin/dirichlet_example
 ~~~
 The user will be updated over the residual error in the euclidean norm of the computed FEM-space interpolation coefficients to the known FEM-space interpolation coefficients for the current number of panels through the command line.
  
 #### <tt>neumann_example</tt>
 This target builds a script that computes the solution to a Neumann problem
-using first kind direct BIEs.
-No command line parameters are necessary.
-Once built the script can be run as follows: 
+using first kind direct BIEs. No command line parameters are necessary. Once built the script can be run as follows: 
 ~~~
 /path/to/library/bin/neumann_example
 ~~~
@@ -545,8 +545,8 @@ The script can be run as follows:
 
 ~~~
 /path/to/library/bin/sv_circle <radius of circle> <refraction inside>
-     <refraction outside> <initial wavenumber> <final wavenumber>
-     <#panels> <order of quadrature rule> <outputfile>
+    <refraction outside> <initial wavenumber> <final wavenumber>
+    <#panels> <order of quadrature rule> <outputfile>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -566,9 +566,9 @@ The script can be run as follows:
 
 ~~~
 /path/to/library/bin/sv_circle <radius of circle> <refraction inside>
-     <refraction outside> <initial wavenumber> <final wavenumber>
-     <#points to evaluate> <scan complex wavenumbers> <#panels>
-     <order of quadrature rule> <accuracy of Arnoldi algorithm>
+    <refraction outside> <initial wavenumber> <final wavenumber>
+    <#points to evaluate> <scan complex wavenumbers> <#panels>
+    <order of quadrature rule> <accuracy of Arnoldi algorithm>
 ~~~
 
 The resulting file will contain the value of <tt>k</tt> in the first column.
@@ -691,8 +691,8 @@ The results are written to file.
 The script can be run as follows:
 ~~~
 /path/to/library/bin/transmission_problem_verification <radius of circle>
-	<#coeffs for series expansion of solution> <refraction inside>
-	<refraction outside> <initial wavenumber>
+    <#coeffs for series expansion of solution> <refraction inside>
+    <refraction outside> <initial wavenumber>
     <order of quadrature rule> <outputfile>
 ~~~
 This output file will contain two columns.
