@@ -2,7 +2,7 @@
 
 ## Square scatterer
 
-The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane wave $u_inc(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
+The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane wave $u_{inc}(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
 
 <p align='center'>
   <img width='500' src='3.0_40.0.gif'>
