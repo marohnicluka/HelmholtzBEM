@@ -34,7 +34,7 @@ Note the increase of amplitude of the transmitted wave at quasi-resonance wave n
 
 ## Analytical solution on circle
 
-The solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, coincides with the analytical solution.
+The solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3).
 
 <p align='center'>
   <img width='500' src='10.0_40.0_circle.png'>

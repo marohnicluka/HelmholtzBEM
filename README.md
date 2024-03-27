@@ -722,7 +722,7 @@ This target builds a script that solves the Helmholtz transmission problem and o
     <lower left x> <lower left y> <upper right x> <upper right x> 
     <mode> <intensity>
 ~~~
-* The first two input arguments are paths to text files. For scatterer/incoming wave file syntax see the corresponding header files <tt>scatterer.hpp</tt> and <tt>incoming.hpp</tt>.
+* The first two input arguments are paths to text files. For scatterer/incoming wave file syntax refer to the corresponding header files <tt>scatterer.hpp</tt> and <tt>incoming.hpp</tt>. See the <tt>data</tt> directory for examples of input files.
 * <tt>#panels</tt> is the desired number of panels or a fraction of the shortest side of the scatterer specifying the base panel length. Panels are generated automatically in a way that the panel length variance is minimal and the actual number of panels is close to the desired number.
 * <tt>quadrature order</tt> refers to computing the Green indentity integrals when lifting the solution from traces.
 * <tt>grid size</tt> is the number of points sampled at each side of the rectangular drawing area, which is specified by its lower left and upper right corners (the next four input arguments).
