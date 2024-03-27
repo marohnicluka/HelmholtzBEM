@@ -740,7 +740,7 @@ The user will be updated through the comma	nd line about the
 progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 ## Acknowledgements
-This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).<img align='top' src='figures/hrzz-logo.png' width='100'>
+This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ). <img align='top' src='figures/hrzz-logo.png' width='100'>
 
 The development was supervised by Luka Grubišić.
 
