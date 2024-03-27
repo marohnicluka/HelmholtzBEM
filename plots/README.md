@@ -2,7 +2,7 @@
 
 ## Square scatterer
 
-The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane wave $u_inc(x)=e^{i k d\cdot x}$ where $d = (\cos\pi \over 3,\sin\pi \over 3)$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
+The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane wave $u_inc(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
 <p align='center'>
   <img width='500' src='3.0_40.0.gif'>
   <img width='500' src='3.0_40.696424.gif'>
@@ -15,7 +15,7 @@ Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120.18$ r
   <img width='500' src='10.0_120.18.gif'>
   <img width='500' src='10.0_120.40159 (quasi-res).gif'>
 </p>
-$n_i=100$, $k=40.1$ resp. $k=40.0425$ (quasi-resonance):
+At $n_i=100$ and $k=40.1$ resp. $k=40.0425$ (quasi-resonance):
 <p align='center'>
   <img width='500' src='100.0_40.1.gif'>
   <img width='500' src='100.0_40.0425 (quasi-res).gif'>
