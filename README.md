@@ -1,6 +1,6 @@
 # Helmholtz Transmission Problem BEM with randomized SVD
 ## Introduction
-This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by [Diego Renner](https://github.com/DiegoRenner), with the following improvements:
+This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.com/DiegoRenner/HelmholtzTransmissionProblemBEM/tree/master) written by Diego Renner, with the following improvements:
 
 - The code is upgraded to the C++17 standard. The typedef <tt>data</tt> was replaced by <tt>grid_data</tt> because it clashed with <tt>std::data</tt>.
 - The new dependencies are the Intel <tt>tbb</tt> library for parallelization, which is supported by GCC, and the <tt>gsl</tt> library which provides the spline interpolation routines used in trace approximation.
@@ -738,6 +738,4 @@ The user will be updated through the comma	nd line about the
 progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 ## Acknowledgements
-This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).
-
-<img src='figures/hrzz-logo.png' width='100'>
+This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ).<img src='figures/hrzz-logo.png' width='100'> The development was supervised by Luka Grubišić.

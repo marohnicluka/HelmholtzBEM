@@ -49,14 +49,13 @@ The same incoming wave scattered accros a torn/distorted circle:
 
 ## Incoming wave reflection
 
-In the following examples, the incoming wave is a Herglotz wave function with $k=250$ and the inner refraction index $n_i$ is set to a very large value ($n_i=10^{-6}$) so that the transmitted wave is practically zero.
+In the following examples, the incoming wave is a Herglotz wave function with $k=250$ and the inner refraction index $n_i$ is set to a very large value ($n_i=10^6$) so that the transmitted wave is practically zero.
+The left image shows the sum of the scattered and incoming wave, and the right image shows only the scattered wave.
 
 <p align='center'>
   <img width='500' src='scattered+incoming.gif'>
   <img width='500' src='scattered.gif'>
 </p>
-
-The left image shows the sum of the scattered and incoming wave, and the right image shows only the scattered wave.
 
 Another reflection example, in which the Herglotz wave is coming directly from below:
 
