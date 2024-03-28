@@ -53,7 +53,7 @@ unsigned int auto_num_panels(const Eigen::VectorXd &x, const Eigen::VectorXd &y,
  * @param y y-coordinates of vertices
  * @param N desired number of panels
  */
-PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N);
+PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor);
 
 /**
  * This function returns 1 if p is inside polygon

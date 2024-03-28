@@ -160,6 +160,7 @@ namespace complex_bessel {
     void H1_0(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0);
     void H1_01(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0,Eigen::ArrayXXcd &h1);
     void H1_01_i(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0,Eigen::ArrayXXcd &h1);
+    void H1_01_cplx(const Eigen::ArrayXXcd &x,Eigen::ArrayXXcd &h0,Eigen::ArrayXXcd &h1);
 
     /**
      * This function computes the nth derivative of the

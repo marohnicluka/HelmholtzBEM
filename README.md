@@ -5,7 +5,7 @@ This is a fork of the project [HelmholtzTransmissionProblemBEM](https://github.c
 - The code is upgraded to the C++17 standard. The typedef <tt>data</tt> was replaced by <tt>grid_data</tt> because it clashed with <tt>std::data</tt>.
 - The new dependencies are the Intel <tt>tbb</tt> library for parallelization, which is supported by GCC, and the <tt>gsl</tt> library which provides the spline interpolation routines used in trace approximation.
 - Linking to [complex_bessel](https://github.com/joeydumont/complex_bessel) library is not needed anymore. The routines for computing Bessel functions are implemented from scratch in C++ using the theoretical background presented in two papers by Donald E. Amos (1983).
-- Significant speedups are achieved in the routine for assembling solution matrices and their derivatives, mostly by removing duplicate computations.
+- Significant speedups were achieved in the routine for assembling solution matrices and their derivatives, mostly by vectorization and by removing duplicate computations.
 - A randomized SVD algorithm was implemented following the ideas in [this paper](https://arxiv.org/abs/0909.4061). The corresponding routine called <tt>randomized_svd::sv</tt> approximates the smallest singular value of the solution matrix by using this technique.
 - Solution of the Helmholtz transmission problem can be plotted for an arbitrary polygonal scatterer and for several types of incoming waves.
 

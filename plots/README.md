@@ -2,7 +2,7 @@
 
 ## Square scatterer
 
-The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane wave $u_{inc}(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
+The scatterer is set to a unit square with $n_i=3$ and subdivided into 400 panels. The incoming wave is a plane wave $u_{inc}(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=40.696424$ (quasi-resonance, right).
 
 <p align='center'>
   <img width='500' src='3.0_40.0.gif'>
@@ -11,25 +11,11 @@ The scatterer is set to a unit square with $n_i=3$. The incoming wave is a plane
 
 ## Hollow box scatterer with a hole
 
-Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120.18$ resp. $k=120.40159$ (quasi-resonance):
+Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120$ (left) resp. $k=120.76977$ (quasi-resonance, right), using 1200 panels:
 
 <p align='center'>
-  <img width='500' src='10.0_120.18.gif'>
-  <img width='500' src='10.0_120.40159 (quasi-res).gif'>
-</p>
-
-At $n_i=100$ and $k=40.1$ resp. $k=40.0425$ (quasi-resonance):
-
-<p align='center'>
-  <img width='500' src='100.0_40.1.gif'>
-  <img width='500' src='100.0_40.0425 (quasi-res).gif'>
-</p>
-
-Note the increase of amplitude of the transmitted wave at quasi-resonance wave numbers $k$. The corresponding amplitude plots for $n_i=100$ are shown below.
-
-<p align='center'>
-  <img width='500' src='100.0_40.1_amp.png'>
-  <img width='500' src='100.0_40.0425_amp (quasi-res).png'>
+  <img width='500' src='10.0_120.0.gif'>
+  <img width='500' src='10.0_120.76977 (quasi-res).gif'>
 </p>
 
 ## Analytical solution on circle
@@ -40,7 +26,7 @@ The solution of the Helmholtz transmission problem on a circle with the incoming
   <img width='500' src='10.0_40.0_circle.png'>
 </p>
 
-The same incoming wave scattered accros a torn/distorted circle:
+The same incoming wave scattered accros a torn/deformed circle:
 
 <p align='center'>
   <img width='500' src='10.0_40.0_pcircle.png'>
@@ -61,4 +47,10 @@ Another reflection example, in which the Herglotz wave is coming directly from b
 
 <p align='center'>
   <img width='500' src='scattered+incoming_2.gif'>
+</p>
+
+Plane wave hitting an oval object ($k=150$):
+
+<p align='center'>
+  <img width='500' src='scattered+incoming_oval.gif'>
 </p>

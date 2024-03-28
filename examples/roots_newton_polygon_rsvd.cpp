@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
         Npanels = auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[6]);
     using PanelVector = PanelVector;
-    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels);
+    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.5);
     ParametrizedMesh mesh(panels);
     unsigned numpanels = panels.size();
 

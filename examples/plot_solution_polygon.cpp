@@ -66,7 +66,8 @@ int main(int argc, char** argv) {
     // define refraction index, wavenumber, order of quadrature and grid size
     double c_i = atof(argv[3]);
     double c_o = atof(argv[4]);
-    double k = atof(argv[5]);
+    complex_t k = atof(argv[5]);
+    bool k_real_positive = k.imag() == 0. && k.real() > 0.;
 
     // define grid size and order of quadrature rule used to compute matrix
     // entries and which singular value to evaluate
@@ -108,9 +109,17 @@ int main(int argc, char** argv) {
         Npanels = auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[6]);
     using PanelVector = PanelVector;
-    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels);
+    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.5);
     ParametrizedMesh mesh(panels);
     unsigned numpanels = panels.size();
+    for (const auto &p : panels) {
+        if (p->length() > M_PI / (5. * k.real())) {
+#ifdef CMDL
+            std::cout << "Warning: the number of panels may be too small" << std::endl;
+#endif
+            break;
+        }
+    }
 
     // generate output filename with set parameters
     std::string base_name = "file_plot_solution_polygon_";
@@ -295,7 +304,8 @@ int main(int argc, char** argv) {
     // compute solution
     double x_step = (upper_right_corner(0) - lower_left_corner(0)) / (grid_size - 1.);
     double y_step = (upper_right_corner(1) - lower_left_corner(1)) / (grid_size - 1.);
-    double k_sqrt_ci = k * std::sqrt(c_i), k_sqrt_co = k * std::sqrt(c_o), kappa, excess;
+    double excess;
+    complex_t k_sqrt_ci = k * std::sqrt(c_i), k_sqrt_co = k * std::sqrt(c_o), kappa;
     unsigned ind;
     int pos;
     for (unsigned I = 0; I < grid_size; ++I) {
@@ -315,7 +325,10 @@ int main(int argc, char** argv) {
                 kappa = (pos == 1 ? k_sqrt_ci : k_sqrt_co);
                 Z = Y + x(0) + ii * x(1);
                 X = Z.cwiseAbs();
-                complex_bessel::H1_01(kappa * X, H0, H1);
+                if (k_real_positive)
+                    complex_bessel::H1_01(kappa.real() * X, H0, H1);
+                else
+                    complex_bessel::H1_01_cplx(kappa * X, H0, H1);
                 G = (H0 * (pos == 1 ? Trace_i_N : Trace_o_N)
                     - kappa * H1 * (pos == 1 ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
                 S(I, J) = double(pos) * ii * 0.25 * G.sum();

@@ -60,9 +60,9 @@ namespace incoming {
      * @param x real 2d vector
      * @param k wavenumber
      */
-    complex_t compute(const wave &w, const Eigen::Vector2d &x, double k);
+    complex_t compute(const wave& w, const Eigen::Vector2d& x, const complex_t &k);
     // gradient
-    Eigen::Vector2cd compute_del(const wave &w, const Eigen::Vector2d &x, double k);
+    Eigen::Vector2cd compute_del(const wave &w, const Eigen::Vector2d &x, const complex_t &k);
 
     /**
      * This function computes the plane wave with
@@ -74,9 +74,9 @@ namespace incoming {
      * @param d real 2d unit vector
      * @param k wavenumber
      */
-    complex_t plane(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double k);
+    complex_t plane(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, const complex_t &k);
     // gradient
-    Eigen::Vector2cd plane_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double k);
+    Eigen::Vector2cd plane_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, const complex_t &k);
 
     /**
      * This function computes the circular besselJ
@@ -89,9 +89,9 @@ namespace incoming {
      * @param l integral order
      * @param k wavenumber
      */
-    complex_t circular_J(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
+    complex_t circular_J(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr = NULL);
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr = NULL);
 
     /**
      * This function computes the circular besselY
@@ -104,9 +104,9 @@ namespace incoming {
      * @param l integral order
      * @param k wavenumber
      */
-    complex_t circular_Y(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k);
+    complex_t circular_Y(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr = NULL);
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr = NULL);
 
     /**
      * This function computes the Fourier-Hankel
@@ -120,9 +120,9 @@ namespace incoming {
      * @param l integral order
      * @param k wavenumber
      */
-    complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k);
+    complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k, complex_t *ddr = NULL);
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k, complex_t *ddr = NULL);
 
     /**
      * This function computes the Herglotz ray wave
@@ -136,9 +136,9 @@ namespace incoming {
      * @param eps ray width
      * @param k wavenumber
      */
-    complex_t herglotz(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double eps, double k);
+    complex_t herglotz(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k);
     // gradient
-    Eigen::Vector2cd herglotz_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double eps, double k);
+    Eigen::Vector2cd herglotz_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k);
 
 }
 

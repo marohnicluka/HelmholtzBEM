@@ -410,13 +410,7 @@ inline void GalerkinMatrixBuilder::compute_coinciding(size_t i) throw() {
     if (k_real_positive) {
         complex_bessel::H1_01_i(ksqrtc.real() * m_v_norm[0], m_h0[0], m_h1[0]);
     } else {
-        for (J = 0; J < N; ++J) {
-            for (I = 0; I < N; ++I) {
-                complex_t arg = ksqrtc * m_v_norm[0](I, J);
-                m_h0[0](I, J) = complex_bessel::H1(0, arg);
-                m_h1[0](I, J) = complex_bessel::H1(1, arg);
-            }
-        }
+        complex_bessel::H1_01_cplx(ksqrtc * m_v_norm[0], m_h0[0], m_h1[0]);
         m_h0[0] *= 1i;
         m_h1[0] *= 1i;
     }
@@ -459,13 +453,8 @@ inline void GalerkinMatrixBuilder::compute_adjacent(size_t i, size_t j, bool swa
         complex_bessel::H1_01_i(ksqrtc.real() * m_v_norm[0], m_h0[0], m_h1[0]);
         complex_bessel::H1_01_i(ksqrtc.real() * m_v_norm[1], m_h0[1], m_h1[1]);
     } else for (K = 0; K < 2; ++K) {
-        for (J = 0; J < N; ++J) {
-            for (I = 0; I < N; ++I) {
-                complex_t arg = ksqrtc * m_v_norm[K](I, J);
-                m_h0[K](I, J) = complex_bessel::H1(0, arg);
-                m_h1[K](I, J) = complex_bessel::H1(1, arg);
-            }
-        }
+        complex_bessel::H1_01_cplx(ksqrtc * m_v_norm[0], m_h0[0], m_h1[0]);
+        complex_bessel::H1_01_cplx(ksqrtc * m_v_norm[1], m_h0[1], m_h1[1]);
         m_h0[K] *= 1i;
         m_h1[K] *= 1i;
     }
@@ -487,13 +476,7 @@ inline void GalerkinMatrixBuilder::compute_general(size_t i, size_t j) throw() {
     if (k_real_positive) {
         complex_bessel::H1_01_i(ksqrtc.real() * m_v_norm_s, m_h0_s, m_h1_s);
     } else {
-        for (J = 0; J < N; ++J) {
-            for (I = 0; I < N; ++I) {
-                complex_t arg = ksqrtc * m_v_norm_s(I, J);
-                m_h0_s(I, J) = complex_bessel::H1(0, arg);
-                m_h1_s(I, J) = complex_bessel::H1(1, arg);
-            }
-        }
+        complex_bessel::H1_01_cplx(ksqrtc * m_v_norm_s, m_h0_s, m_h1_s);
         m_h0_s *= 1i;
         m_h1_s *= 1i;
     }

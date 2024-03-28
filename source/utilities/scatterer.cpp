@@ -89,8 +89,7 @@ unsigned int auto_num_panels(const Eigen::VectorXd& x, const Eigen::VectorXd& y,
     return (unsigned int)std::round(d / (min_s * f));
 }
 
-
-PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N) {
+PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor) {
     PanelVector res;
     size_t n = x.size(), i, j;
     Eigen::Vector2d p1, p2;
@@ -137,21 +136,36 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
             k(j) -= 1.0;
     }
     unsigned M = (unsigned int)k.sum();
-#ifdef CMDL
-    std::cout << "Working with " << M << " panels" << std::endl
-              << "Mean panel size: " << (d.array() / k.array()).mean() << ", variability: " << obj(0.0) * 100.0 << " %" << std::endl;
-#endif
     res.reserve(M);
     for (i = 0; i < n; ++i) {
         p1(0) = x(i);
         p1(1) = y(i);
         p2(0) = x(i < n - 1 ? i + 1 : 0);
         p2(1) = y(i < n - 1 ? i + 1 : 0);
-        d = (p2 - p1) / k(i);
-        for (j = 0; j < (size_t)k(i); ++j) {
-            res.push_back(std::make_shared<ParametrizedLine>(p1 + double(j) * d, p1 + double(j+1) * d));
+        Eigen::Vector2d D = (p2 - p1) / k(i);
+        int n_i = (int)k(i);
+        if (refinement_factor >= 1. || n_i < 3) {
+            d = D;
+            for (j = 0; j < n_i; ++j) {
+                res.push_back(std::make_shared<ParametrizedLine>(p1 + double(j) * d, j + 1 < n_i ? p1 + double(j+1) * d : p2));
+            }
+        } else {
+            int nh = n_i % 2 ? (n_i - 1) / 2 : n_i / 2 - 1;
+            double alpha = std::pow(refinement_factor, 1. / double(nh));
+            Eigen::Vector2d d_base, pos = p1;
+            double sc = 2. * (1. - std::pow(alpha, nh + 1)) / (1. - alpha);
+            d_base = D * double(n_i) / (n_i % 2 ? sc - 1. : sc);
+            for (j = 0; j < n_i; ++j) {
+                int e = (n_i-1-2*int(j))/2;
+                d = d_base * std::pow(alpha, e >= 0 ? e : -e);
+                res.push_back(std::make_shared<ParametrizedLine>(pos, j + 1 < n_i ? pos + d : p2));
+                pos += d;
+            }
         }
     }
+#ifdef CMDL
+    std::cout << "Working with " << M << " panels" << std::endl;
+#endif
     return res;
 }
 

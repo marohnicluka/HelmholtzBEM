@@ -90,7 +90,7 @@ namespace incoming {
     }
 
 
-    complex_t compute(const wave &w, const Eigen::Vector2d &x, double k) {
+    complex_t compute(const wave &w, const Eigen::Vector2d &x, const complex_t &k) {
         complex_t res = 0.;
         for_each (w.cbegin(), w.cend(), [&](const wave_params &p) {
             switch (p.type) {
@@ -117,7 +117,7 @@ namespace incoming {
         return res;
     }
 
-    Eigen::Vector2cd compute_del(const wave &w, const Eigen::Vector2d &x, double k) {
+    Eigen::Vector2cd compute_del(const wave &w, const Eigen::Vector2d &x, const complex_t &k) {
         Eigen::Vector2cd res(0., 0.);
         for_each (w.cbegin(), w.cend(), [&](const wave_params &p) {
             switch (p.type) {
@@ -144,26 +144,27 @@ namespace incoming {
         return res;
     }
 
-    complex_t plane(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double k) {
+    complex_t plane(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, const complex_t &k) {
         auto p = x - x0;
         return exp(ii * k * (p(0) * cos(angle) + p(1) * sin(angle)));
     }
 
-    Eigen::Vector2cd plane_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, double k) {
+    Eigen::Vector2cd plane_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, double angle, const complex_t &k) {
         Eigen::Vector2d d(cos(angle), sin(angle));
         return ii * k * plane(x, x0, angle, k) * d;
     }
 
-    complex_t circular_J(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
+    complex_t circular_J(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
         auto p = x - x0;
         double r = p.norm();
         double theta = atan2(p(1) / r, p(0) / r);
         return complex_bessel::J(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr) {
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr) {
         auto p = x - x0;
-        double r = p.norm(), a = k * r;
+        double r = p.norm();
+        complex_t a = k * r;
         double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
         complex_t jl = complex_bessel::J(l, a), jlp = complex_bessel::J(l-1, a), jln = complex_bessel::J(l+1, a);
@@ -176,16 +177,17 @@ namespace incoming {
         return res;
     }
 
-    complex_t circular_Y(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k) {
+    complex_t circular_Y(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
         auto p = x - x0;
         double r = p.norm();
         double theta = atan2(p(1) / r, p(0) / r);
         return complex_bessel::Y(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, double k, complex_t *ddr) {
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr) {
         auto p = x - x0;
-        double r = p.norm(), a = k * r;
+        double r = p.norm();
+        complex_t a = k * r;
         double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
         complex_t yl = complex_bessel::Y(l, a), ylp = complex_bessel::Y(l-1, a), yln = complex_bessel::Y(l+1, a);
@@ -198,11 +200,11 @@ namespace incoming {
         return res;
     }
 
-    complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k) {
+    complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k) {
         return circular_J(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y(x, x0, l, k);
     }
 
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, double k, complex_t *ddr) {
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k, complex_t *ddr) {
         complex_t ddr_1, ddr_2, a = (kind == 1 ? ii : -ii);
         auto v1 = circular_J_del(x, x0, l, k, &ddr_1);
         auto v2 = circular_Y_del(x, x0, l, k, &ddr_2);
@@ -213,47 +215,54 @@ namespace incoming {
 
     double integrand_real(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return exp(ii * k * (x1 * cos(theta) + x2 * sin(theta))).real();
     }
 
     double integrand_imag(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return exp(ii * k * (x1 * cos(theta) + x2 * sin(theta))).imag();
     }
 
     double integrand_x1_real(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return (ii * k * cos(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).real();
     }
 
     double integrand_x1_imag(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return (ii * k * cos(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).imag();
     }
 
     double integrand_x2_real(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return (ii * k * sin(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).real();
     }
 
     double integrand_x2_imag(double theta, void *p) {
         double *params = (double*) p;
-        double k = params[0], x1 = params[1], x2 = params[2];
+        complex_t k(params[0], params[1]);
+        double x1 = params[2], x2 = params[3];
         return (ii * k * sin(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).imag();
     }
 
-    complex_t herglotz(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, double k) {
+    complex_t herglotz(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k) {
         size_t N = 1000;
         gsl_integration_workspace *w = gsl_integration_workspace_alloc(N);
-        double result_real, result_imag, error, p[3], lb = angle - eps, ub = angle + eps;
-        p[0] = k;
-        p[1] = x(0) - x0(0);
-        p[2] = x(1) - x0(1);
+        double result_real, result_imag, error, p[4], lb = angle - eps, ub = angle + eps;
+        p[0] = k.real();
+        p[1] = k.imag();
+        p[2] = x(0) - x0(0);
+        p[3] = x(1) - x0(1);
         gsl_function F;
         F.params = &p;
         F.function = &integrand_real;
@@ -264,13 +273,14 @@ namespace incoming {
         return result_real + ii * result_imag;
     }
 
-    Eigen::Vector2cd herglotz_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, double k) {
+    Eigen::Vector2cd herglotz_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k) {
         size_t N = 1000;
         gsl_integration_workspace *w = gsl_integration_workspace_alloc(N);
-        double result_real, result_imag, error, p[3], lb = angle - eps, ub = angle + eps;
-        p[0] = k;
-        p[1] = x(0) - x0(0);
-        p[2] = x(1) - x0(1);
+        double result_real, result_imag, error, p[4], lb = angle - eps, ub = angle + eps;
+        p[0] = k.real();
+        p[1] = k.imag();
+        p[2] = x(0) - x0(0);
+        p[3] = x(1) - x0(1);
         Eigen::Vector2cd res;
         gsl_function F;
         F.params = &p;

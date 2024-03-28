@@ -1308,7 +1308,7 @@ namespace complex_bessel {
                     J0(i,j)=j0(v);
                     Y0(i,j)=y0(v);
                 });
-            } else
+            } else {
                 for (unsigned j=0; j<nc; ++j) {
                     for (unsigned i=0; i<nr; ++i) {
                         double v=x(i,j);
@@ -1316,6 +1316,7 @@ namespace complex_bessel {
                         Y0(i,j)=y0(v);
                     }
                 }
+            }
         }
     }
     void Bessel_JY_01(const Eigen::ArrayXXd &x,Eigen::ArrayXXd &J0,Eigen::ArrayXXd &Y0,Eigen::ArrayXXd &J1,Eigen::ArrayXXd &Y1) {
@@ -1357,7 +1358,7 @@ namespace complex_bessel {
                     Y0(i,j)=y0(v);
                     Y1(i,j)=y1(v);
                 });
-            } else
+            } else {
                 for (unsigned j=0; j<nc; ++j) {
                     for (unsigned i=0; i<nr; ++i) {
                         double v=x(i,j);
@@ -1367,6 +1368,7 @@ namespace complex_bessel {
                         Y1(i,j)=y1(v);
                     }
                 }
+            }
         }
     }
     void H1_0(const Eigen::ArrayXXd &x,Eigen::ArrayXXcd &h0) {
@@ -1388,6 +1390,27 @@ namespace complex_bessel {
         Bessel_JY_01(x,J0,Y0,J1,Y1);
         h0=-Y0+1i*J0;
         h1=-Y1+1i*J1;
+    }
+    void H1_01_cplx(const Eigen::ArrayXXcd &x,Eigen::ArrayXXcd &h0,Eigen::ArrayXXcd &h1) {
+        size_t nr=x.rows(),nc=x.cols();
+        if (_parallelize) {
+            std::vector<std::pair<size_t,size_t> > ind(nc*nr);
+            std::iota(ind.begin(),ind.end(),PairInc<size_t>(0,0,nr));
+            for_each(std::execution::par,ind.begin(),ind.end(),[&](std::pair<size_t,size_t> &p) {
+                size_t i=p.first,j=p.second;
+                Cplx v=x(i,j);
+                h0(i,j)=H1(0,v);
+                h1(i,j)=H1(1,v);
+            });
+        } else {
+            for (unsigned j=0; j<nc; ++j) {
+                for (unsigned i=0; i<nr; ++i) {
+                    Cplx v=x(i,j);
+                    h0(i,j)=H1(0,v);
+                    h1(i,j)=H1(1,v);
+                }
+            }
+        }
     }
 
     /* n-th derivative of Bessel function f_v(z) */
