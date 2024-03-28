@@ -61,12 +61,12 @@ bool read_array(const std::string &fname, Eigen::ArrayXXd &res) {
     return true;
 }
 
-bool read_polygon(const string &fname, Eigen::VectorXd &x, Eigen::VectorXd &y) {
+bool read_polygon(const string &fname, Eigen::VectorXd &x, Eigen::VectorXd &y, double scale) {
     Eigen::ArrayXXd ar;
     if (!read_array(fname, ar) || ar.cols() != 2)
         return false;
-    x = ar.col(0);
-    y = ar.col(1);
+    x = scale * ar.col(0);
+    y = scale * ar.col(1);
     return true;
 }
 

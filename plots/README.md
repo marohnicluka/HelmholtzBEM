@@ -11,12 +11,20 @@ The scatterer is set to a unit square with $n_i=3$ and subdivided into 400 panel
 
 ## Hollow box scatterer with a hole
 
-Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120$ (left) resp. $k=120.76977$ (quasi-resonance, right), using 1200 panels:
+Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120.76977$ (quasi-resonance), using 1200 panels:
 
 <p align='center'>
-  <img width='500' src='10.0_120.0.gif'>
   <img width='500' src='10.0_120.76977 (quasi-res).gif'>
 </p>
+
+Quasi-resonance for a similar object with smaller hole, shown below, is much more prominent. Here, $n_i=10^8$ and $k=42.5$ (left) resp. $k=42.688651$ (quasi-resonance, right). 384 panels and the same plane incoming wave as in the square scatterer case are used.
+
+<p align='center'>
+  <img width='500' src='1e8_42.5.gif'>
+  <img width='500' src='1e8_42.688651 (quasi-res).gif'>
+</p>
+
+Note that the amplitude of the scattered wave inside the cavity is around 200 times larger than the amplitude of the incoming wave when $k$ is a quasi-resonance.
 
 ## Analytical solution on circle
 

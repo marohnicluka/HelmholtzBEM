@@ -30,7 +30,7 @@ using namespace std;
  * @param x x-coordinates of vertices
  * @param y y-coordinates of vertices
  */
-bool read_polygon(const string &fname, Eigen::VectorXd &x, Eigen::VectorXd &y);
+bool read_polygon(const std::string& fname, Eigen::VectorXd& x, Eigen::VectorXd& y, double scale = 1.0);
 
 /**
  * This function computes the number of
