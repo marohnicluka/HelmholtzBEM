@@ -28,22 +28,16 @@ Note that the amplitude of the scattered wave inside the cavity is around 200 ti
 
 ## Analytical solution on circle
 
-The solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3).
+Left: the solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, shown on the left, coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle.
 
 <p align='center'>
-  <img width='500' src='10.0_40.0_circle.png'>
-</p>
-
-The same incoming wave scattered accros a torn/deformed circle:
-
-<p align='center'>
-  <img width='500' src='10.0_40.0_pcircle.png'>
-  <img width='500' src='10.0_40.0_distorted_circle.png'>
+  <img width='500' src='10.0_40.0_circle.gif'>
+  <img width='500' src='10.0_40.0_distorted_circle.gif'>
 </p>
 
 ## Incoming wave reflection
 
-In the following examples, the incoming wave is a Herglotz wave function with $k=250$ and the inner refraction index $n_i$ is set to a very large value ($n_i=10^8$) so that the transmitted wave is practically zero.
+In the examples below, the incoming wave is a Herglotz wave function with $k=250$ and the inner refraction index $n_i$ is set to a very large value ($n_i=10^8$) so that the transmitted wave is practically zero.
 The left image shows the sum of the scattered and incoming wave, and the right image shows only the scattered wave.
 
 <p align='center'>
@@ -51,14 +45,9 @@ The left image shows the sum of the scattered and incoming wave, and the right i
   <img width='500' src='scattered.gif'>
 </p>
 
-Another two reflection examples: left -- the Herglotz wave is coming directly from below, right -- plane wave at 60 degrees ($k=150$) is hitting an oval object.
+Left: Herglotz wave coming directly from below. Right: plane wave at 60 degrees ($k=150$) is hitting an oval object.
 
 <p align='center'>
   <img width='500' src='scattered+incoming_2.gif'>
-</p>
-
-
-
-<p align='center'>
   <img width='500' src='scattered+incoming_oval.gif'>
 </p>
