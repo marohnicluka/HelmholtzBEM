@@ -28,7 +28,7 @@ Note that the amplitude of the scattered wave inside the cavity is around 200 ti
 
 ## Analytical solution on circle
 
-Left: the solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, shown on the left, coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle.
+Left: the solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, which coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle.
 
 <p align='center'>
   <img width='500' src='10.0_40.0_circle.gif'>
@@ -45,7 +45,7 @@ The left image shows the sum of the scattered and incoming wave, and the right i
   <img width='500' src='scattered.gif'>
 </p>
 
-Left: Herglotz wave coming directly from below. Right: plane wave at 60 degrees ($k=150$) is hitting an oval object.
+Left: Herglotz wave coming directly from below. Right: plane wave at 60 degrees ($k=150$) hitting an oval object.
 
 <p align='center'>
   <img width='500' src='scattered+incoming_2.gif'>
