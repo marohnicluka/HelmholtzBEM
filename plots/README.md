@@ -6,7 +6,7 @@ The scatterer is set to a unit square with $n_i=3$ and subdivided into 400 panel
 
 <p align='center'>
   <img width='500' src='3.0_40.0.gif'>
-  <img width='500' src='3.0_40.696424.gif'>
+  <img width='500' src='3.0_41.955486 (quasi-res).gif'>
 </p>
 
 ## Hollow box scatterer with a hole
