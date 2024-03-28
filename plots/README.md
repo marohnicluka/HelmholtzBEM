@@ -17,7 +17,7 @@ Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120.76977
   <img width='500' src='10.0_120.76977 (quasi-res).gif'>
 </p>
 
-Quasi-resonance for a similar object with smaller hole, shown below, is much more prominent. Here, $n_i=10^8$ and $k=42.5$ (left) resp. $k=42.688651$ (quasi-resonance, right). 384 panels and the same plane incoming wave as in the square scatterer case are used.
+A similar (non-penetrable) object having a much smaller hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=10^8$ and $k=42.5$ (left) resp. $k=42.688651$ (quasi-resonance, right). 384 panels and the same plane incoming wave as in the square scatterer case are used.
 
 <p align='center'>
   <img width='500' src='1e8_42.5.gif'>
