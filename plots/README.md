@@ -11,13 +11,7 @@ The scatterer is set to a unit square with $n_i=3$ and subdivided into 400 panel
 
 ## Hollow box scatterer with a hole
 
-Hollow box scatterer with incoming plane wave from below, $n_i=10$, $k=120.76977$ (quasi-resonance), using 1200 panels:
-
-<p align='center'>
-  <img width='500' src='10.0_120.76977 (quasi-res).gif'>
-</p>
-
-A similar (non-penetrable) object having a much smaller hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=10^8$ and $k=42.5$ (left) resp. $k=42.688651$ (quasi-resonance, right). 384 panels and the same plane incoming wave as in the square scatterer case are used.
+A (non-penetrable) object with a small hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=10^8$ and $k=42.5$ (left) resp. $k=42.688651$ (quasi-resonance, right). 384 panels and the same plane incoming wave as in the square scatterer case are used.
 
 <p align='center'>
   <img width='500' src='1e8_42.5.gif'>
@@ -26,9 +20,18 @@ A similar (non-penetrable) object having a much smaller hole and the scattered w
 
 Note that the amplitude of the scattered wave inside the cavity is around 200 times larger than the amplitude of the incoming wave when $k$ is a quasi-resonance.
 
+### Another cavity example
+
+The scatterer is a wavy open torus with $n_i=100$. The plots below show the transmitted and scattered wave for the incoming plane wave from right and $k=84$ (left) resp. $k=83.00777$ (quasi-resonance, right).
+
+<p align='center'>
+  <img width='500' src='100.0_84.0.gif'>
+  <img width='500' src='100.0_83.00777 (quasi-res).gif'>
+</p>
+
 ## Analytical solution on circle
 
-Left: the solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, which coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle.
+Left: the solution of the Helmholtz transmission problem on a circle with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, which coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle. (800 panels are used in both cases.)
 
 <p align='center'>
   <img width='500' src='10.0_40.0_circle.gif'>
