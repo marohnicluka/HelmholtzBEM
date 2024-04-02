@@ -77,6 +77,22 @@
             return coeffs;
         }
 
+        Eigen::VectorXcd Interpolate_helmholtz_neu(const std::function<Eigen::Vector2cd(double, double)> &func,
+                                                   const ParametrizedMesh &mesh) const {
+            // The output vector
+            unsigned coeffs_size = getSpaceDim(mesh.getNumPanels());
+            Eigen::VectorXcd coeffs(coeffs_size);
+            const PanelVector &panels = mesh.getPanels();
+            // Filling the coefficients
+            for (unsigned i = 0; i < coeffs_size; ++i) {
+                const auto &p = *panels[i];
+                Eigen::Vector2d pt = p[0], tangent = p.Derivative_01(0), normal_o;
+                normal_o << tangent(1), -tangent(0);
+                coeffs(i) = normal_o.normalized().dot(func(pt(0), pt(1)));
+            }
+            return coeffs;
+        }
+
         // Constructor
         DiscontinuousSpace() {
             // Number of reference shape functions for the space

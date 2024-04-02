@@ -225,28 +225,10 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
             }
         }
     }
-    Derivative_01_sc.resize(N, N * numpanels);
-    Derivative_01_tc.resize(N, N * numpanels);
-    Derivative_01_sa.resize(N, N * numpanels);
-    Derivative_01_ta.resize(N, N * numpanels);
-    Derivative_01_swapped_sa.resize(N, N * numpanels);
-    Derivative_01_swapped_ta.resize(N, N * numpanels);
     Derivative_01_sg.resize(Ns, Ns * numpanels);
     Derivative_01_tg.resize(Ns, Ns * numpanels);
-    Derivative_01_sc_n.resize(N, N * numpanels);
-    Derivative_01_tc_n.resize(N, N * numpanels);
-    Derivative_01_sa_n.resize(N, N * numpanels);
-    Derivative_01_ta_n.resize(N, N * numpanels);
-    Derivative_01_swapped_sa_n.resize(N, N * numpanels);
-    Derivative_01_swapped_ta_n.resize(N, N * numpanels);
     Derivative_01_sg_n.resize(Ns, Ns * numpanels);
     Derivative_01_tg_n.resize(Ns, Ns * numpanels);
-    op_sc.resize(N, N * numpanels);
-    op_tc.resize(N, N * numpanels);
-    op_sa.resize(N, N * numpanels);
-    op_ta.resize(N, N * numpanels);
-    swapped_op_sa.resize(N, N * numpanels);
-    swapped_op_ta.resize(N, N * numpanels);
     op_sg.resize(Ns, Ns * numpanels);
     op_tg.resize(Ns, Ns * numpanels);
     if (_parallelize) {
@@ -256,36 +238,12 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
             Eigen::ArrayXXcd tmp(N, N), tmps(Ns, Ns);
             Eigen::ArrayXXd tmp_n(N, N), tmps_n(Ns, Ns);
             const auto &p = *panels[i];
-            p.Derivative_01(m_sc, tmp, tmp_n);
-            Derivative_01_sc.block(0, N * i, N, N) = tmp;
-            Derivative_01_sc_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_tc, tmp, tmp_n);
-            Derivative_01_tc.block(0, N * i, N, N) = tmp;
-            Derivative_01_tc_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_sa, tmp, tmp_n);
-            Derivative_01_sa.block(0, N * i, N, N) = tmp;
-            Derivative_01_sa_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_ta, tmp, tmp_n);
-            Derivative_01_ta.block(0, N * i, N, N) = tmp;
-            Derivative_01_ta_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01_swapped(m_sa, tmp, tmp_n, true);
-            Derivative_01_swapped_sa.block(0, N * i, N, N) = tmp;
-            Derivative_01_swapped_sa_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01_swapped(m_ta, tmp, tmp_n, true);
-            Derivative_01_swapped_ta.block(0, N * i, N, N) = tmp;
-            Derivative_01_swapped_ta_n.block(0, N * i, N, N) = tmp_n;
             p.Derivative_01(m_sg, tmps, tmps_n);
             Derivative_01_sg.block(0, Ns * i, Ns, Ns) = tmps;
             Derivative_01_sg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
             p.Derivative_01(m_tg, tmps, tmps_n);
             Derivative_01_tg.block(0, Ns * i, Ns, Ns) = tmps;
             Derivative_01_tg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
-            op_sc.block(0, i * N, N, N) = p[m_sc];
-            op_tc.block(0, i * N, N, N) = p[m_tc];
-            op_sa.block(0, i * N, N, N) = p[m_sa];
-            op_ta.block(0, i * N, N, N) = p[m_ta];
-            swapped_op_sa.block(0, i * N, N, N) = p.swapped_op(m_sa);
-            swapped_op_ta.block(0, i * N, N, N) = p.swapped_op(m_ta);
             op_sg.block(0, i * Ns, Ns, Ns) = p[m_sg];
             op_tg.block(0, i * Ns, Ns, Ns) = p[m_tg];
         });
@@ -294,36 +252,12 @@ BuilderData::BuilderData(const ParametrizedMesh &mesh_in,
         Eigen::ArrayXXd tmp_n(N, N), tmps_n(Ns, Ns);
         for (size_t i = 0; i < numpanels; ++i) {
             const auto &p = *panels[i];
-            p.Derivative_01(m_sc, tmp, tmp_n);
-            Derivative_01_sc.block(0, N * i, N, N) = tmp;
-            Derivative_01_sc_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_tc, tmp, tmp_n);
-            Derivative_01_tc.block(0, N * i, N, N) = tmp;
-            Derivative_01_tc_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_sa, tmp, tmp_n);
-            Derivative_01_sa.block(0, N * i, N, N) = tmp;
-            Derivative_01_sa_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01(m_ta, tmp, tmp_n);
-            Derivative_01_ta.block(0, N * i, N, N) = tmp;
-            Derivative_01_ta_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01_swapped(m_sa, tmp, tmp_n, true);
-            Derivative_01_swapped_sa.block(0, N * i, N, N) = tmp;
-            Derivative_01_swapped_sa_n.block(0, N * i, N, N) = tmp_n;
-            p.Derivative_01_swapped(m_ta, tmp, tmp_n, true);
-            Derivative_01_swapped_ta.block(0, N * i, N, N) = tmp;
-            Derivative_01_swapped_ta_n.block(0, N * i, N, N) = tmp_n;
             p.Derivative_01(m_sg, tmps, tmps_n);
             Derivative_01_sg.block(0, Ns * i, Ns, Ns) = tmps;
             Derivative_01_sg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
             p.Derivative_01(m_tg, tmps, tmps_n);
             Derivative_01_tg.block(0, Ns * i, Ns, Ns) = tmps;
             Derivative_01_tg_n.block(0, Ns * i, Ns, Ns) = tmps_n;
-            op_sc.block(0, i * N, N, N) = p[m_sc];
-            op_tc.block(0, i * N, N, N) = p[m_tc];
-            op_sa.block(0, i * N, N, N) = p[m_sa];
-            op_ta.block(0, i * N, N, N) = p[m_ta];
-            swapped_op_sa.block(0, i * N, N, N) = p.swapped_op(m_sa);
-            swapped_op_ta.block(0, i * N, N, N) = p.swapped_op(m_ta);
             op_sg.block(0, i * Ns, Ns, Ns) = p[m_sg];
             op_tg.block(0, i * Ns, Ns, Ns) = p[m_tg];
         }
@@ -398,12 +332,10 @@ GalerkinMatrixBuilder::GalerkinMatrixBuilder(const BuilderData &builder_data)
 
 // compute values required for the coinciding panels case
 inline void GalerkinMatrixBuilder::compute_coinciding(size_t i) throw() {
-    size_t I, J, N = data.getCGaussQROrder();
-    m_tangent_p[0] = data.Derivative_01_tc.block(0, N * i, N, N);
-    m_tangent_p_norm[0] = data.Derivative_01_tc_n.block(0, N * i, N, N);
-    m_tangent[0] = data.Derivative_01_sc.block(0, N * i, N, N);
-    m_tangent_norm[0] = data.Derivative_01_sc_n.block(0, N * i, N, N);
-    m_v[0] = data.op_sc.block(0, N * i, N, N) - data.op_tc.block(0, N * i, N, N);
+    const auto &p = *data.mesh.getPanels()[i];
+    p.Derivative_01(data.m_tc, m_tangent_p[0], m_tangent_p_norm[0]);
+    p.Derivative_01(data.m_sc, m_tangent[0], m_tangent_norm[0]);
+    m_v[0] = p[data.m_sc] - p[data.m_tc];
     m_v_norm2[0] = m_v[0].cwiseAbs2();
     m_v_norm[0] = m_v_norm2[0].cwiseSqrt();
     auto tic = chrono::high_resolution_clock::now();
@@ -420,30 +352,23 @@ inline void GalerkinMatrixBuilder::compute_coinciding(size_t i) throw() {
 
 // compute values required for the adjacent panels case
 inline void GalerkinMatrixBuilder::compute_adjacent(size_t i, size_t j, bool swap) throw() {
-    size_t I, J, K, N = data.getCGaussQROrder();
+    size_t K, N = data.getCGaussQROrder();
+    const auto &p = *data.mesh.getPanels()[i], &q = *data.mesh.getPanels()[j];
     if (swap) {
-        m_tangent_p[0] = data.Derivative_01_swapped_ta.block(0, N * j, N, N);
-        m_tangent_p_norm[0] = data.Derivative_01_swapped_ta_n.block(0, N * j, N, N);
-        m_tangent_p[1] = data.Derivative_01_swapped_sa.block(0, N * j, N, N);
-        m_tangent_p_norm[1] = data.Derivative_01_swapped_sa_n.block(0, N * j, N, N);
-        m_tangent[0] = data.Derivative_01_sa.block(0, N * i, N, N);
-        m_tangent_norm[0] = data.Derivative_01_sa_n.block(0, N * i, N, N);
-        m_tangent[1] = data.Derivative_01_ta.block(0, N * i, N, N);
-        m_tangent_norm[1] = data.Derivative_01_ta_n.block(0, N * i, N, N);
+        q.Derivative_01_swapped(data.m_ta, m_tangent_p[0], m_tangent_p_norm[0], true);
+        q.Derivative_01_swapped(data.m_sa, m_tangent_p[1], m_tangent_p_norm[1], true);
+        p.Derivative_01(data.m_sa, m_tangent[0], m_tangent_norm[0]);
+        p.Derivative_01(data.m_ta, m_tangent[1], m_tangent_norm[1]);
     } else {
-        m_tangent_p[0] = data.Derivative_01_ta.block(0, N * j, N, N);
-        m_tangent_p_norm[0] = data.Derivative_01_ta_n.block(0, N * j, N, N);
-        m_tangent_p[1] = data.Derivative_01_sa.block(0, N * j, N, N);
-        m_tangent_p_norm[1] = data.Derivative_01_sa_n.block(0, N * j, N, N);
-        m_tangent[0] = data.Derivative_01_swapped_sa.block(0, N * i, N, N);
-        m_tangent_norm[0] = data.Derivative_01_swapped_sa_n.block(0, N * i, N, N);
-        m_tangent[1] = data.Derivative_01_swapped_ta.block(0, N * i, N, N);
-        m_tangent_norm[1] = data.Derivative_01_swapped_ta_n.block(0, N * i, N, N);
+        q.Derivative_01(data.m_ta, m_tangent_p[0], m_tangent_p_norm[0]);
+        q.Derivative_01(data.m_sa, m_tangent_p[1], m_tangent_p_norm[1]);
+        p.Derivative_01_swapped(data.m_sa, m_tangent[0], m_tangent_norm[0], true);
+        p.Derivative_01_swapped(data.m_ta, m_tangent[1], m_tangent_norm[1], true);
     }
-    m_v[0] = swap ? data.op_sa.block(0, N * i, N, N) - data.swapped_op_ta.block(0, N * j, N, N)
-                  : data.swapped_op_sa.block(0, N * i, N, N) - data.op_ta.block(0, N * j, N, N);
-    m_v[1] = swap ? data.op_ta.block(0, N * i, N, N) - data.swapped_op_sa.block(0, N * j, N, N)
-                  : data.swapped_op_ta.block(0, N * i, N, N) - data.op_sa.block(0, N * j, N, N);
+    m_v[0] = swap ? p[data.m_sa] - q.swapped_op(data.m_ta)
+                  : p.swapped_op(data.m_sa) - q[data.m_ta];
+    m_v[1] = swap ? p[data.m_ta] - q.swapped_op(data.m_sa)
+                  : p.swapped_op(data.m_ta) - q[data.m_sa];
     m_v_norm2[0] = m_v[0].cwiseAbs2();
     m_v_norm2[1] = m_v[1].cwiseAbs2();
     m_v_norm[0] = m_v_norm2[0].cwiseSqrt();
@@ -464,7 +389,7 @@ inline void GalerkinMatrixBuilder::compute_adjacent(size_t i, size_t j, bool swa
 
 // compute values required for the disjoint panels case
 inline void GalerkinMatrixBuilder::compute_general(size_t i, size_t j) throw() {
-    size_t I, J, N = data.getGaussQROrder();
+    size_t N = data.getGaussQROrder();
     m_tangent_p_s = data.Derivative_01_tg.block(0, N * j, N, N);
     m_tangent_p_norm_s = data.Derivative_01_tg_n.block(0, N * j, N, N);
     m_tangent_s = data.Derivative_01_sg.block(0, N * i, N, N);

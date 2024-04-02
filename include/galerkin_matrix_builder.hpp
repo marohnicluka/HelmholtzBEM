@@ -189,6 +189,7 @@ public:
     // get timing info for profiling
     unsigned getInteractionMatrixAssemblyTime();
     unsigned getHankelComputationTime();
+    const BuilderData &getData() const { return data; }
 };
 
 #endif // GALERKIN_ALLHPP

@@ -198,6 +198,11 @@ namespace sol {
                                  int l,
                                  double *a_n,
                                  double k);
+    Eigen::Vector2cd u_i_del(double x1,
+                            double x2,
+                            int l,
+                            double *a_n,
+                            double k);
 
     /**
      * Evaluates Neumann data of a wave scattered by a 2-dimensional ball of radius \p eps

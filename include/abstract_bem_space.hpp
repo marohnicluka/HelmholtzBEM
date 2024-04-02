@@ -172,6 +172,9 @@
         virtual Eigen::VectorXcd
         Interpolate_helmholtz(const std::function<std::complex<double>(double, double)> &func,
                               const ParametrizedMesh &mesh) const = 0;
+        virtual Eigen::VectorXcd
+        Interpolate_helmholtz_neu(const std::function<Eigen::Vector2cd(double, double)> &func,
+                                  const ParametrizedMesh &mesh) const = 0;
 
     protected:
         /**

@@ -44,3 +44,9 @@ Eigen::Vector2d ParametrizedMesh::getVertex(unsigned int i) const {
   return panels_[i]->operator()(-1);
 }
 
+double ParametrizedMesh::getTotalLength() const {
+  double len = 0.;
+  for (size_t i = 0; i < panels_.size(); ++i)
+    len += panels_[i]->length();
+  return len;
+}

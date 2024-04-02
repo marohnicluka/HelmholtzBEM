@@ -2,17 +2,6 @@
 #include "mass_matrix.hpp"
 #include <chrono>
 #include <iostream>
-#if 0 // used for debugging
-#include <double_layer.hpp>
-#include <single_layer.hpp>
-#include <hypersingular.hpp>
-#include <double_layer_der.hpp>
-#include <single_layer_der.hpp>
-#include <hypersingular_der.hpp>
-#include <double_layer_der2.hpp>
-#include <single_layer_der2.hpp>
-#include <hypersingular_der2.hpp>
-#endif
 
 using namespace std::chrono;
 

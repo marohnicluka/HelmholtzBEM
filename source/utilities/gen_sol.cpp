@@ -123,6 +123,27 @@ namespace sol {
         return result;
     }
 
+    Eigen::Vector2cd u_i_del(double x1,
+                             double x2,
+                             int l,
+                             double *a_n,
+                             double k) {
+        // simplify parameters
+        Eigen::Vector2cd result;
+        double r = sqrt(x1 * x1 + x2 * x2);
+        double eta = atan2(x2 / r, x1 / r);
+        Eigen::Vector2d e_r;
+        e_r << cos(eta), sin(eta);
+        Eigen::Vector2d e_eta;
+        e_eta << -sin(eta), cos(eta);
+        // evaluate Neumann data of incoming wave as series expansion
+        for (int i = 0; i < 2 * l + 1; i++) {
+            result += a_n[i] * complex_t(cos((i - l) * eta), sin((i - l) * eta)) *
+                      (k * jn_der(i - l, k * r) * e_r + ii * double(i - l) / r * e_eta);
+        }
+        return result;
+    }
+
     complex_t u_i_neu(double x1,
                       double x2,
                       int l,

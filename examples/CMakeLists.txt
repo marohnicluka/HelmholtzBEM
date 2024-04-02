@@ -69,5 +69,5 @@ target_link_libraries(sv_square_arnoldi parametrizations
         find_roots complex_bessel compute_SV_der compute_SV_der_arnoldi gen_sol_op blas lapack arpack)
 target_link_libraries(debugging_SVs parametrizations gen_sol_op complex_bessel)
 target_link_libraries(rsvd_test parametrizations find_roots complex_bessel compute_SV_der_arnoldi randomized_svd gen_sol_op blas lapack arpack tbb)
-target_link_libraries(plot_solution_polygon parametrizations complex_bessel generate_solution gen_sol_op incoming scatterer blas lapack tbb gsl)
-target_link_libraries(verify_solution_analytic parametrizations complex_bessel generate_solution gen_sol_op incoming blas lapack tbb gsl)
+target_link_libraries(plot_solution_polygon parametrizations complex_bessel solvers incoming scatterer blas lapack tbb)
+target_link_libraries(verify_solution_analytic parametrizations complex_bessel generate_solution solvers incoming blas lapack tbb)

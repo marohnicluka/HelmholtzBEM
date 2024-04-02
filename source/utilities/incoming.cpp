@@ -161,7 +161,7 @@ namespace incoming {
         return complex_bessel::J(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr) {
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
         auto p = x - x0;
         double r = p.norm();
         complex_t a = k * r;
@@ -171,10 +171,7 @@ namespace incoming {
         complex_t dfdr = k * (jlp - jln) / 2., dfdt = jl * il;
         Eigen::Vector2cd res;
         res << dfdr * c - dfdt * s / r, dfdr * s + dfdt * c / r;
-        res *= exp(-il * theta);
-        if (ddr != NULL)
-            *ddr = p.normalized().dot(res);
-        return res;
+        return res * exp(il * theta);
     }
 
     complex_t circular_Y(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
@@ -184,7 +181,7 @@ namespace incoming {
         return complex_bessel::Y(l, k*r) * exp(ii * double(l) * theta);
     }
 
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr) {
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
         auto p = x - x0;
         double r = p.norm();
         complex_t a = k * r;
@@ -194,23 +191,15 @@ namespace incoming {
         complex_t dfdr = k * (ylp - yln) / 2., dfdt = yl * il;
         Eigen::Vector2cd res;
         res << dfdr * c - dfdt / r * s, dfdr * s + dfdt / r * c;
-        res *= exp(-il * theta);
-        if (ddr != NULL)
-            *ddr = p.normalized().dot(res);
-        return res;
+        return res * exp(il * theta);
     }
 
     complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k) {
         return circular_J(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y(x, x0, l, k);
     }
 
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k, complex_t *ddr) {
-        complex_t ddr_1, ddr_2, a = (kind == 1 ? ii : -ii);
-        auto v1 = circular_J_del(x, x0, l, k, &ddr_1);
-        auto v2 = circular_Y_del(x, x0, l, k, &ddr_2);
-        if (ddr != NULL)
-            *ddr = ddr_1 + a * ddr_2;
-        return v1 + a * v2;
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k) {
+        return circular_J_del(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y_del(x, x0, l, k);
     }
 
     double integrand_real(double theta, void *p) {

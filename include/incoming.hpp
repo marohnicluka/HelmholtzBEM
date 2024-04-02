@@ -91,7 +91,7 @@ namespace incoming {
      */
     complex_t circular_J(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr = NULL);
+    Eigen::Vector2cd circular_J_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
 
     /**
      * This function computes the circular besselY
@@ -106,7 +106,7 @@ namespace incoming {
      */
     complex_t circular_Y(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k, complex_t *ddr = NULL);
+    Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int l, const complex_t &k);
 
     /**
      * This function computes the Fourier-Hankel
@@ -122,7 +122,7 @@ namespace incoming {
      */
     complex_t fourier_hankel(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k);
     // gradient
-    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k, complex_t *ddr = NULL);
+    Eigen::Vector2cd fourier_hankel_del(const Eigen::Vector2d &x, const Eigen::Vector2d &x0, int kind, int l, const complex_t &k);
 
     /**
      * This function computes the Herglotz ray wave

@@ -66,6 +66,6 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
  * @param t parameter value corresponding to the nearest point if x is on boundary
  * @param boundary_threshold boundary width, default 0.001
  */
-int ppoly(const PanelVector &panels, const Eigen::Vector2d &p, unsigned &ind, double &t, double boundary_threshold = 1e-3);
+int ppoly(const PanelVector &panels, const Eigen::Vector2d &p, unsigned &ind, double &t, double boundary_threshold = 1e-5);
 
 #endif // SCATTERER_HPP

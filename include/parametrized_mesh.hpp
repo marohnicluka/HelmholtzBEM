@@ -52,6 +52,14 @@ public:
   Eigen::Vector2d getVertex(unsigned int i) const;
 
   /**
+   * This function is used for getting the total length of the
+   * parametrized mesh
+   *
+   * @return the total length of the mesh
+   */
+  double getTotalLength() const;
+
+  /**
    * This function is used for getting the split value for the mesh. If split
    * is non zero, it indicates the position where the second boundary begins
    * in the mesh object; the domain is annular. A zero value indicates there is

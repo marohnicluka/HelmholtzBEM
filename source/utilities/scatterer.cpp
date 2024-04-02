@@ -13,6 +13,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <numeric>
 
 using namespace std;
 
@@ -91,8 +92,9 @@ unsigned int auto_num_panels(const Eigen::VectorXd& x, const Eigen::VectorXd& y,
 
 PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor) {
     PanelVector res;
-    size_t n = x.size(), i, j;
-    Eigen::Vector2d p1, p2;
+    unsigned n = x.size();
+    int i, j;
+    Eigen::Vector2d p0, p1, p2, p3;
     Eigen::VectorXd d, k, b;
     Eigen::MatrixXd E;
     E.setZero(n, n);
@@ -137,34 +139,87 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
     }
     unsigned M = (unsigned int)k.sum();
     res.reserve(M);
+    double eps = std::pow(numeric_limits<double>::epsilon(), 0.75);
     for (i = 0; i < n; ++i) {
+        p0(0) = i == 0 ? x(n - 1) : x(i - 1);
+        p0(1) = i == 0 ? y(n - 1) : y(i - 1);
         p1(0) = x(i);
         p1(1) = y(i);
         p2(0) = x(i < n - 1 ? i + 1 : 0);
         p2(1) = y(i < n - 1 ? i + 1 : 0);
+        p3(0) = x(i < n - 2 ? i + 2 : i - n + 2);
+        p3(1) = y(i < n - 2 ? i + 2 : i - n + 2);
         Eigen::Vector2d D = (p2 - p1) / k(i);
         int n_i = (int)k(i);
+        double f1 = (1. - (p0 - p1).dot(p2 - p1) / ((p0 - p1).norm() * (p2 - p1).norm())) / 2.;
+        double f2 = (1. - (p1 - p2).dot(p3 - p2) / ((p1 - p2).norm() * (p3 - p2).norm())) / 2.;
+        f1 = refinement_factor + (1. - refinement_factor) * f1;
+        f2 = refinement_factor + (1. - refinement_factor) * f2;
         if (refinement_factor >= 1. || n_i < 3) {
             d = D;
             for (j = 0; j < n_i; ++j) {
                 res.push_back(std::make_shared<ParametrizedLine>(p1 + double(j) * d, j + 1 < n_i ? p1 + double(j+1) * d : p2));
             }
         } else {
-            int nh = n_i % 2 ? (n_i - 1) / 2 : n_i / 2 - 1;
-            double alpha = std::pow(refinement_factor, 1. / double(nh));
-            Eigen::Vector2d d_base, pos = p1;
-            double sc = 2. * (1. - std::pow(alpha, nh + 1)) / (1. - alpha);
-            d_base = D * double(n_i) / (n_i % 2 ? sc - 1. : sc);
+            int j_best = 0;
+            double alpha_best, d1_best, d2_best;
+            for (j = 1; j < n_i; ++j) {
+                double alpha, alpha_next = refinement_factor;
+                auto f = [&](double x) {
+                    return f1 * std::pow(x, 1-j) + f2 * std::pow(x, j+1-n_i) - x * (f1 + f2) - double(n_i) * (1. - x);
+                };
+                auto f_der = [&](double x) {
+                    return double(n_i) - f1 - f2 - f1 * (j - 1.) * std::pow(x, -j) - f2 * (n_i - j - 1.) * std::pow(x, j-n_i);
+                };
+                unsigned iter_count = 0;
+                do {
+                    alpha = alpha_next;
+                    alpha_next = alpha - f(alpha) / f_der(alpha);
+                    ++iter_count;
+                } while (std::abs(alpha_next - alpha) > eps && iter_count <= 1000);
+                if (iter_count > 1000) {
+                    std::cerr << "Error: failed to find panel subdivision, try changing the number of panels" << std::endl;
+                    exit(1);
+                }
+                double d1 = f1 / std::pow(alpha, j-1), d2 = f2 / std::pow(alpha, n_i-j-1);
+                if (!j_best || std::abs(d1 - d2) < std::abs(d1_best - d2_best)) {
+                    d1_best = d1;
+                    d2_best = d2;
+                    j_best = j;
+                    alpha_best = alpha;
+                }
+            }
+            Eigen::Vector2d pos = p1;
             for (j = 0; j < n_i; ++j) {
-                int e = (n_i-1-2*int(j))/2;
-                d = d_base * std::pow(alpha, e >= 0 ? e : -e);
+                if (j < j_best)
+                    d = D * d1_best * std::pow(alpha_best, j_best - 1 - j);
+                else
+                    d = D * d2_best * std::pow(alpha_best, j - j_best);
                 res.push_back(std::make_shared<ParametrizedLine>(pos, j + 1 < n_i ? pos + d : p2));
+                //std::cout << pos(0) << " " << pos(1) << ";\n";
                 pos += d;
             }
+            //std::cout << (pos - p2).norm() << ", " << f2 * D.norm() << std::endl;
         }
     }
 #ifdef CMDL
     std::cout << "Working with " << M << " panels" << std::endl;
+    double min_length = res[0]->length(), max_length = min_length, avg_length = 0., s = 0.;
+    for (i = 0; i < M; ++i) {
+        double len = res[i]->length();
+        if (len < min_length)
+            min_length = len;
+        if (len > max_length)
+            max_length = len;
+        avg_length += len;
+    }
+    avg_length /= double(M);
+    for (i = 0; i < M; ++i) {
+        s += std::pow(avg_length - res[i]->length(), 2);
+    }
+    s = std::sqrt(s);
+    std::cout << "Panel length (min, max, mean, variability): "
+              << min_length << ", " << max_length << ", " << avg_length << ", " << s / avg_length << " %" << std::endl;
 #endif
     return res;
 }
@@ -190,10 +245,9 @@ bool on_the_boundary(const PanelVector &panels, const Eigen::Vector2d &p, unsign
     for (unsigned i = 0; i < n; ++i) {
         const auto &panel = *panels[i];
         Eigen::Vector2d p1 = panel[0], p2 = panel[1];
-        double l2 = (p2-p1).squaredNorm();
-        double t = fmax(0, fmin(1, ((p-p1).transpose() * (p2-p1))(0) / l2));
+        double t = fmax(0, fmin(1, ((p - p1).transpose() * (p2-p1))(0) / (p2 - p1).squaredNorm()));
         Eigen::Vector2d proj = p1 + t * (p2 - p1);
-        double d = (p-proj).norm();
+        double d = (p - proj).norm();
         if (min_d < 0. || min_d > d) {
             min_d = d;
             ind = i;
