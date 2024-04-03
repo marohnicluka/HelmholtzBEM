@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <numeric>
 
+#define MAX_ITER_ALPHA 5000
+
 using namespace std;
 
 bool read_array(const std::string &fname, Eigen::ArrayXXd &res) {
@@ -94,6 +96,7 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
     PanelVector res;
     unsigned n = x.size();
     int i, j;
+    double eps = numeric_limits<double>::epsilon(), eps2 = std::sqrt(eps);
     Eigen::Vector2d p0, p1, p2, p3;
     Eigen::VectorXd d, k, b;
     Eigen::MatrixXd E;
@@ -107,7 +110,7 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
         p2(1) = y(i < n - 1 ? i + 1 : 0);
         d(i) = (p2 - p1).norm();
 #ifdef CMDL
-        if (d(i) < 1e-9)
+        if (d(i) < eps)
             std::cout << "Warning: two nearly identical vertices detected! Distance: " << d(i) << std::endl;
 #endif
         if (i < n - 1)
@@ -139,7 +142,6 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
     }
     unsigned M = (unsigned int)k.sum();
     res.reserve(M);
-    double eps = std::pow(numeric_limits<double>::epsilon(), 0.75);
     for (i = 0; i < n; ++i) {
         p0(0) = i == 0 ? x(n - 1) : x(i - 1);
         p0(1) = i == 0 ? y(n - 1) : y(i - 1);
@@ -176,11 +178,7 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
                     alpha = alpha_next;
                     alpha_next = alpha - f(alpha) / f_der(alpha);
                     ++iter_count;
-                } while (std::abs(alpha_next - alpha) > eps && iter_count <= 1000);
-                if (iter_count > 1000) {
-                    std::cerr << "Error: failed to find panel subdivision, try changing the number of panels" << std::endl;
-                    exit(1);
-                }
+                } while (std::abs(alpha_next - alpha) > eps && iter_count <= MAX_ITER_ALPHA);
                 double d1 = f1 / std::pow(alpha, j-1), d2 = f2 / std::pow(alpha, n_i-j-1);
                 if (!j_best || std::abs(d1 - d2) < std::abs(d1_best - d2_best)) {
                     d1_best = d1;
@@ -199,7 +197,18 @@ PanelVector make_scatterer(const Eigen::VectorXd &x, const Eigen::VectorXd &y, u
                 //std::cout << pos(0) << " " << pos(1) << ";\n";
                 pos += d;
             }
-            //std::cout << (pos - p2).norm() << ", " << f2 * D.norm() << std::endl;
+            if ((pos - p2).norm() / p2.norm() > eps2) {
+#ifdef CMDL
+                std::cerr << "Warning: panel subdivision failed, using uniform subdivision instead (rel. error: "
+                          << (pos - p2).norm() / p2.norm() << ")" << std::endl;
+#endif
+                for (j = 0; j < n_i; ++j) res.pop_back();
+                pos = p1;
+                for (j = 0; j < n_i; ++j) {
+                    res.push_back(std::make_shared<ParametrizedLine>(pos, j + 1 < n_i ? pos + D : p2));
+                    pos += D;
+                }
+            }
         }
     }
 #ifdef CMDL

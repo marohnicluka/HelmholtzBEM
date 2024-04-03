@@ -736,8 +736,7 @@ If <tt>mode</tt> = 1 or 4, then the gnuplot script produces several images in th
 convert -delay 4 -loop 0 img/file_plot_solution_square_XXXX_*.png
     output.gif
 ~~~
-The user will be updated through the comma	nd line about the
-progress of the algorithm if <tt>-DCMDL</tt> is set.
+The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 ## Acknowledgements
 This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ). <img align='top' src='figures/hrzz-logo.png' width='100'>

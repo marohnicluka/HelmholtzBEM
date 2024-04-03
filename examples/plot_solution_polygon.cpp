@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
         Npanels = auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[6]);
     using PanelVector = PanelVector;
-    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.2);
+    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.25);
     ParametrizedMesh mesh(panels);
     for (const auto &p : panels) {
         if (p->length() > M_PI / (5. * k.real())) {

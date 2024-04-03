@@ -11,7 +11,7 @@ The scatterer is set to a unit square with $n_i=3$ and subdivided into 800 panel
 
 ## Hollow box scatterer with a hole
 
-A (non-penetrable) object with a small hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=100$ and $k=81.5$ (left) resp. $k=82.256558$ (quasi-resonance, right). 1000 panels and a plane wave incoming from below are used.
+A hollow box with a small hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=100$ and $k=81.5$ (left) resp. $k=82.256558$ (quasi-resonance, right). 1000 panels and a plane wave incoming from below are used.
 
 <p align='center'>
   <img width='500' src='100.0_81.5.gif'>

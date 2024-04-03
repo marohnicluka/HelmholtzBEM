@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     int nr = 2 * numpanels;
     Eigen::MatrixXcd W = randomized_svd::randGaussian(nr, nc);
 
-    double k_max = k_min + .5, k_step = (k_max - k_min) / (n_points_k - 1);
+    double k_max = k_min + 5., k_step = (k_max - k_min) / (n_points_k - 1.);
 
     std::vector<size_t> ind(n_points_k);
     std::vector<double> rsv(n_points_k), asv(n_points_k), rsv_min, asv_min, bracket_left, bracket_right;
@@ -147,8 +147,7 @@ int main(int argc, char** argv) {
     });
     auto toc = high_resolution_clock::now();
     auto dur_assembly = duration_cast<milliseconds>(toc - tic);
-    auto dur_rsv = duration_cast<milliseconds>(toc - tic);
-    std::cout << "Assembly: " << dur_assembly.count() << std::endl;
+    std::cout << "Assembly: " << 1e-3 * dur_assembly.count() << " sec" << std::endl;
 #if 0
     std::cout << "Hankel time: " << builder.getHankelTime() << ", ratio: "
               << (100 * builder.getHankelTime()) / dur_assembly.count() << "%" << std::endl;
@@ -163,14 +162,15 @@ int main(int argc, char** argv) {
     toc = high_resolution_clock::now();
     auto dur_asv = duration_cast<milliseconds>(toc - tic);
     tic = high_resolution_clock::now();
-    std::for_each(std::execution::par, ind.cbegin(), ind.cend(), [&](size_t i) {
+    std::for_each(std::execution::seq, ind.cbegin(), ind.cend(), [&](size_t i) {
         const Eigen::MatrixXcd &T = Tall.block(0, i * nr, nr, nr);
         rsv[i] = randomized_svd::sv(T, W, q);
     });
     toc = high_resolution_clock::now();
-    std::cout << "Arnoldi: " << dur_asv.count() << std::endl;
-    std::cout << "RSVD: " << dur_rsv.count() << std::endl;
-    std::cout << "Ratio: " << double(dur_assembly.count()) / double(dur_rsv.count()) << std::endl;
+    auto dur_rsv = duration_cast<milliseconds>(toc - tic);
+    std::cout << "Arnoldi: " << 1e-3 * dur_asv.count() << " sec" << std::endl;
+    std::cout << "RSVD: " << 1e-3 * dur_rsv.count() << " sec" << std::endl;
+    std::cout << "Ratio (Arnoldi / RSVD): " << double(dur_asv.count()) / double(dur_rsv.count()) << std::endl;
     std::vector<double> err(n_points_k);
     for (size_t i = 0; i < n_points_k; ++i) {
         err[i] = std::abs(asv[i] - rsv[i]) / std::abs(asv[i]);

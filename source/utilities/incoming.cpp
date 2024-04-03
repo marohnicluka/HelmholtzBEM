@@ -9,7 +9,7 @@
 
 #include "incoming.hpp"
 #include "cbessel.hpp"
-#include <gsl/gsl_integration.h>
+#include "gauleg.hpp"
 #include <sstream>
 #include <fstream>
 #include <algorithm>
@@ -18,6 +18,7 @@
 namespace incoming {
 
     const complex_t ii = complex_t(0.,1.);
+    const auto gaussQR = getCGaussQR(21);
 
     bool read_double(istringstream &iss, double &res) {
         string num;
@@ -202,89 +203,23 @@ namespace incoming {
         return circular_J_del(x, x0, l, k) + (kind == 1 ? ii : -ii) * circular_Y_del(x, x0, l, k);
     }
 
-    double integrand_real(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return exp(ii * k * (x1 * cos(theta) + x2 * sin(theta))).real();
-    }
-
-    double integrand_imag(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return exp(ii * k * (x1 * cos(theta) + x2 * sin(theta))).imag();
-    }
-
-    double integrand_x1_real(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return (ii * k * cos(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).real();
-    }
-
-    double integrand_x1_imag(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return (ii * k * cos(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).imag();
-    }
-
-    double integrand_x2_real(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return (ii * k * sin(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).real();
-    }
-
-    double integrand_x2_imag(double theta, void *p) {
-        double *params = (double*) p;
-        complex_t k(params[0], params[1]);
-        double x1 = params[2], x2 = params[3];
-        return (ii * k * sin(theta) * exp(ii * k * (x1 * cos(theta) + x2 * sin(theta)))).imag();
-    }
-
     complex_t herglotz(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k) {
-        size_t N = 1000;
-        gsl_integration_workspace *w = gsl_integration_workspace_alloc(N);
-        double result_real, result_imag, error, p[4], lb = angle - eps, ub = angle + eps;
-        p[0] = k.real();
-        p[1] = k.imag();
-        p[2] = x(0) - x0(0);
-        p[3] = x(1) - x0(1);
-        gsl_function F;
-        F.params = &p;
-        F.function = &integrand_real;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_real, &error);
-        F.function = &integrand_imag;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_imag, &error);
-        gsl_integration_workspace_free(w);
-        return result_real + ii * result_imag;
+        double lb = angle - eps, ub = angle + eps, h = ub - lb;
+        auto y = x - x0;
+        auto theta = lb + h * gaussQR.x.array();
+        return ((ii * k * (y(0) * theta.cos() + y(1) * theta.sin())).exp() * gaussQR.w.array()).sum();
     }
 
     Eigen::Vector2cd herglotz_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, double angle, double eps, const complex_t &k) {
-        size_t N = 1000;
-        gsl_integration_workspace *w = gsl_integration_workspace_alloc(N);
-        double result_real, result_imag, error, p[4], lb = angle - eps, ub = angle + eps;
-        p[0] = k.real();
-        p[1] = k.imag();
-        p[2] = x(0) - x0(0);
-        p[3] = x(1) - x0(1);
+        double lb = angle - eps, ub = angle + eps, h = ub - lb;
+        auto y = x - x0;
+        auto theta = lb + h * gaussQR.x.array();
+        auto cos_theta = theta.cos();
+        auto sin_theta = theta.sin();
+        auto e = (ii * k * (y(0) * cos_theta + y(1) * sin_theta)).exp();
         Eigen::Vector2cd res;
-        gsl_function F;
-        F.params = &p;
-        F.function = &integrand_x1_real;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_real, &error);
-        F.function = &integrand_x1_imag;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_imag, &error);
-        res(0) = result_real + ii * result_imag;
-        F.function = &integrand_x2_real;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_real, &error);
-        F.function = &integrand_x2_imag;
-        gsl_integration_qag(&F, lb, ub, 0., 1e-7, N, 3, w, &result_imag, &error);
-        gsl_integration_workspace_free(w);
-        res(1) = result_real + ii * result_imag;
-        return res;
+        res << (cos_theta * e * gaussQR.w.array()).sum(), (sin_theta * e * gaussQR.w.array()).sum();
+        return ii * k * res;
     }
 
 }
