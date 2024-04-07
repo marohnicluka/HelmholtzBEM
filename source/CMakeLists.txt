@@ -34,7 +34,7 @@ add_library(mass_matrix STATIC mass_matrix.cpp)
 target_link_libraries(mass_matrix parametrizations tbb)
 
 add_library(sol_op STATIC mass_matrix galerkin_matrix_builder)
-target_link_libraries(sol_op complex_bessel single_layer double_layer hypersingular single_layer_der double_layer_der hypersingular_der single_layer_der2 double_layer_der2 hypersingular_der2 tbb)
+target_link_libraries(sol_op complex_bessel tbb)
 # add_library(sol_op_der STATIC single_layer_der double_layer_der hypersingular_der)
 # target_link_libraries(sol_op_der complex_bessel tbb)
 # add_library(sol_op_der2 STATIC single_layer_der2 double_layer_der2 hypersingular_der2)

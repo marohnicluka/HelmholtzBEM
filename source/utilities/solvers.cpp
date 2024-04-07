@@ -1,4 +1,6 @@
 #include <iostream>
+#include <execution>
+#include <boost/math/quadrature/gauss_kronrod.hpp>
 #include "gen_sol_op.hpp"
 #include "solvers.hpp"
 #include "mass_matrix.hpp"
@@ -9,6 +11,8 @@
 #include "cbessel.hpp"
 #include "cspline.hpp"
 #include "scatterer.hpp"
+
+//#define EXTERNAL_INTEGRATION 1
 
 typedef std::complex<double> complex_t;
 namespace bvp {
@@ -145,6 +149,7 @@ namespace tp {
                       Eigen::ArrayXXd &grid_Y,
                       Eigen::ArrayXXcd &S) {
             S.resize(grid_size_x, grid_size_y);
+            S.setZero();
             grid_X.resize(grid_size_x, grid_size_y);
             grid_Y.resize(grid_size_x, grid_size_y);
             QuadRule qr = getGaussQR(order, 0., 1.);
@@ -164,7 +169,8 @@ namespace tp {
             D.resize(numpanels, n);
             N.resize(numpanels, n);
             G.resize(numpanels, n);
-            double t0 = 0., t1;
+            double t0 = 0., t1, width = upper_right_corner(0) - lower_left_corner(0);
+            double height = upper_right_corner(1) - lower_left_corner(1);
             for (unsigned i = 0; i < numpanels; ++i) {
                 const auto &p = *mesh.getPanels()[i];
                 double plen = p.length();
@@ -185,42 +191,75 @@ namespace tp {
                 t0 += plen;
             }
             // compute solution using the Green second identity
-            double x_step = (upper_right_corner(0) - lower_left_corner(0)) / (grid_size_x - 1.);
-            double y_step = (upper_right_corner(1) - lower_left_corner(1)) / (grid_size_y - 1.);
-            double excess;
+            double x_step = width / (grid_size_x - 1.);
+            double y_step = height / (grid_size_y - 1.);
             complex_t k_sqrt_ci = k * std::sqrt(c_i), k_sqrt_co = k * std::sqrt(c_o), kappa;
-            unsigned ind;
-            int pos;
-            bool k_real_positive = k.imag() == 0 && k.real() > 0;
-            for (unsigned I = 0; I < grid_size_x; ++I) {
-                for (unsigned J = 0; J < grid_size_y; ++J) {
-                    Eigen::Vector2d x;
-                    x << lower_left_corner(0) + I * x_step, lower_left_corner(1) + J * y_step;
-                    grid_X(I, J) = x(0);
-                    grid_Y(I, J) = x(1);
-                    pos = ppoly(mesh.getPanels(), x, ind, excess);
-                    if (pos == 0) { // on the boundary
-                        t0 = 0.;
-                        for (unsigned i = 0; i < ind; ++i)
-                            t0 += mesh.getPanels()[i]->length();
-                        t0 += excess * mesh.getPanels()[ind]->length();
-                        S(I, J) = trace_dir.eval(t0);
-                    } else { // not on the boundary (pos = 1 if inside, else pos = -1)
-                        kappa = (pos == 1 ? k_sqrt_ci : k_sqrt_co);
-                        Z = Y + x(0) + 1i * x(1);
-                        X = Z.cwiseAbs();
-                        if (k_real_positive)
-                            complex_bessel::H1_01(kappa.real() * X, H0, H1);
-                        else
-                            complex_bessel::H1_01_cplx(kappa * X, H0, H1);
-                        G = (H0 * (pos == 1 ? Trace_i_N : Trace_o_N)
-                            - kappa * H1 * (pos == 1 ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
-                        S(I, J) = double(pos) * 1i * 0.25 * G.sum();
-                        if (add_u_inc && pos == -1)
-                            S(I, J) += u_inc(x(0), x(1));
+            bool inside, k_real_positive = k.imag() == 0 && k.real() > 0;
+            unsigned done = 0;
+            std::mutex mtx;
+            std::vector<std::pair<size_t,size_t> > ind(grid_size_x * grid_size_y);
+            std::iota(ind.begin(), ind.end(), complex_bessel::PairInc<size_t>(0, 0, grid_size_x));
+            for_each (//std::execution::par,
+                      ind.cbegin(), ind.cend(), [&](const std::pair<size_t, size_t> &IJ) {
+                unsigned I = IJ.first, J = IJ.second;
+                unsigned prog = (100 * (++done)) / (grid_size_x * grid_size_y);
+#ifdef CMDL
+                mtx.lock();
+                auto pstr = std::to_string(prog);
+                std::cout << "\rLifting solution from traces... " << pstr << "%" << std::string(3 - pstr.length(), ' ');
+                std::flush(std::cout);
+                mtx.unlock();
+#endif
+                Eigen::Vector2d x;
+                x << lower_left_corner(0) + I * x_step, lower_left_corner(1) + J * y_step;
+                grid_X(I, J) = x(0);
+                grid_Y(I, J) = x(1);
+                unsigned i;
+                if (scatterer::distance(mesh, x, &i, &t0) < 1e-8) { // on the boundary
+                    double len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t0 * mesh.getPanels()[i]->length();
+                    S(I, J) = trace_dir.eval(len);
+                } else {
+                    inside = scatterer::inside_poly(mesh, x);
+                    kappa = inside ? k_sqrt_ci : k_sqrt_co;
+#ifndef EXTERNAL_INTEGRATION
+                    Z = Y + x(0) + 1i * x(1);
+                    X = Z.cwiseAbs();
+                    if (k_real_positive)
+                        complex_bessel::H1_01(kappa.real() * X, H0, H1);
+                    else
+                        complex_bessel::H1_01_cplx(kappa * X, H0, H1);
+                    G = (H0 * (inside ? Trace_i_N : Trace_o_N)
+                        - kappa * H1 * (inside ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
+                    S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * G.sum();
+#else
+                    complex_t z = 0.;
+                    for (i = 0; i < numpanels; ++i) {
+                        const auto &panel = *mesh.getPanels()[i];
+                        auto func = [&](double t) {
+                            Eigen::Vector2d y = panel[t], tangent = panel.Derivative_01(t), normal_o;
+                            double d = (x - y).norm(), len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t * panel.length();
+                            complex_t h0 = complex_bessel::H1(0, kappa * d), h1 = complex_bessel::H1(1, kappa * d), tD, tN;
+                            tD = trace_dir.eval(len);
+                            tN = trace_neu.eval(len);
+                            normal_o << tangent(1), -tangent(0);
+                            normal_o.normalize();
+                            if (!inside) {
+                                tD -= u_inc(y(0), y(1));
+                                tN -= normal_o.dot(u_inc_del(y(0), y(1)));
+                            }
+                            return (h0 * tN - kappa * h1 * tD * normal_o.dot(x - y) / d) * tangent.norm();
+                        };
+                        z += boost::math::quadrature::gauss_kronrod<double, 15>::integrate(func, 0, 1, 10, 1e-6);
                     }
+                    S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * z;
+#endif
+                    if (add_u_inc && inside)
+                        S(I, J) += u_inc(x(0), x(1));
                 }
-            }
+            });
+#ifdef CMDL
+            std::cout << std::endl;
+#endif
         }
 
         Eigen::ArrayXXcd solve_in_rectangle(const ParametrizedMesh& mesh,
@@ -239,6 +278,9 @@ namespace tp {
                                             bool total_field,
                                             GalerkinMatrixBuilder &builder,
                                             Eigen::MatrixXcd &so) {
+#ifdef CMDL
+            std::cout << "Computing boundary traces..." << std::endl;
+#endif
             auto traces = in_traces(mesh, u_inc, u_inc_del, k, c_o, c_i, builder, so);
             unsigned numpanels = mesh.getNumPanels();
             ComplexSpline trace_dir(mesh, traces.head(numpanels));
@@ -265,6 +307,9 @@ namespace tp {
                                             Eigen::ArrayXXd &grid_Y,
                                             bool total_field) {
             unsigned numpanels = mesh.getNumPanels();
+#ifdef CMDL
+            std::cout << "Computing boundary traces..." << std::endl;
+#endif
             auto traces = solve(mesh, u_inc, u_inc_del, order_galerkin, k, c_o, c_i);
             ComplexSpline trace_dir(mesh, traces.head(numpanels));
             ComplexSpline trace_neu(mesh, traces.tail(numpanels));

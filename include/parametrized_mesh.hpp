@@ -60,6 +60,16 @@ public:
   double getTotalLength() const;
 
   /**
+   * This function is used for getting the panel at point s in [0,1]
+   *
+   * @param s length
+   * @return the panel at s
+   */
+  const AbstractParametrizedCurve &getPanel(double s, double &t) const;
+
+  double getCSum(unsigned int i) const { return c_sums_[i]; }
+
+  /**
    * This function is used for getting the split value for the mesh. If split
    * is non zero, it indicates the position where the second boundary begins
    * in the mesh object; the domain is annular. A zero value indicates there is
@@ -83,6 +93,10 @@ private:
    * mesh (annular domain). Indicates the starting position of second boundary.
    */
   unsigned split_;
+  /**
+   * Private field containing the cummulative sums of panel lengths.
+   */
+  std::vector<double> c_sums_;
 }; // class ParametrizedMesh
 
 #endif // PARAMETRIZEDMESHHPP

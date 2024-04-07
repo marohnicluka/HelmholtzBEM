@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 
     // read polygonal scatterer from file
     Eigen::VectorXd poly_x, poly_y;
-    if (!read_polygon(fname_scatterer, poly_x, poly_y)) {
+    if (!scatterer::read_polygon(fname_scatterer, poly_x, poly_y)) {
         std::cerr << "Error: failed to read scatterer from file" << std::endl;
         return 1;
     }
@@ -100,12 +100,10 @@ int main(int argc, char** argv) {
     unsigned Npanels;
     if (strlen(argv[6]) > 1 && argv[6][1] == '.') {
         double f = atof(argv[6]);
-        Npanels = auto_num_panels(poly_x, poly_y, f);
+        Npanels = scatterer::auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[6]);
-    using PanelVector = PanelVector;
-    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.25);
-    ParametrizedMesh mesh(panels);
-    for (const auto &p : panels) {
+    auto mesh = scatterer::panelize(poly_x, poly_y, Npanels, 0.25);
+    for (const auto &p : mesh.getPanels()) {
         if (p->length() > M_PI / (5. * k.real())) {
 #ifdef CMDL
             std::cout << "Warning: the number of panels may be too small" << std::endl;

@@ -199,7 +199,7 @@ namespace complex_bessel {
      * @param z complex argument
      * @param scaled if true, the result is scaled by exp(2/3*z*sqrt(z))
      */
-    Cplx Ai (       const Cplx &z,bool scaled=false);
+    Cplx Ai (const Cplx &z,bool scaled=false);
 
     /**
      * This function computes the first derivative of the
@@ -208,7 +208,7 @@ namespace complex_bessel {
      * @param z complex argument
      * @param scaled if true, the result is scaled by exp(2/3*z*sqrt(z))
      */
-    Cplx Aip(       const Cplx &z,bool scaled=false);
+    Cplx Aip(const Cplx &z,bool scaled=false);
 
     /**
      * This function computes the value of the
@@ -217,7 +217,7 @@ namespace complex_bessel {
      * @param z complex argument
      * @param scaled if true, the result is scaled by exp(-abs(real(2/3*z*sqrt(z))))
      */
-    Cplx Bi (       const Cplx &z,bool scaled=false);
+    Cplx Bi (const Cplx &z,bool scaled=false);
 
     /**
      * This function computes the first derivative of the
@@ -226,7 +226,7 @@ namespace complex_bessel {
      * @param z complex argument
      * @param scaled if true, the result is scaled by exp(-abs(real(2/3*z*sqrt(z))))
      */
-    Cplx Bip(       const Cplx &z,bool scaled=false);
+    Cplx Bip(const Cplx &z,bool scaled=false);
 
 }
 

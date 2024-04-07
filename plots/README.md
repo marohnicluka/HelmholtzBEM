@@ -18,15 +18,6 @@ A hollow box with a small hole and the scattered wave for a non-resonant resp. n
   <img width='500' src='100.0_82.256558 (quasi-res).gif'>
 </p>
 
-### Another cavity example
-
-The scatterer is a wavy open torus with $n_i=100$, subdivided into 1200 panels. The plots below show the transmitted and scattered wave for the incoming plane wave from right and $k=84$ (left) resp. $k=83.00777$ (quasi-resonance, right).
-
-<p align='center'>
-  <img width='500' src='100.0_84.0.gif'>
-  <img width='500' src='100.0_83.00777 (quasi-res).gif'>
-</p>
-
 ## Analytical solution on circle
 
 Left: the solution of the Helmholtz transmission problem on a circle ($n_i=10$) with the incoming wave $u_{inc}(x)=J_{-2}(k r) e^{-2i\phi}+J_{-1}(k r) e^{-i\phi}+J_0(k r)+J_1(k r) e^{i\phi}+J_2(k r) e^{2i\phi}$, $x=(r\sin\phi,r\cos\phi)$ and $k=40$, which coincides with the analytical solution (see [Diego Renner's thesis](https://github.com/DiegoRenner/ThesisDoc), section 2.3). Right: the same incoming wave scattered accross a deformed circle. 800 panels are used in both cases.

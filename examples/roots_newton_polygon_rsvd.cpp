@@ -37,6 +37,7 @@
 #include "find_roots.hpp"
 #include "continuous_space.hpp"
 #include "scatterer.hpp"
+#include "cbessel.hpp"
 
 #define REFINE
 #define PARALLELIZE
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
     // read polygonal scatterer from file
     string fname_scatterer = argv[1];
     Eigen::VectorXd poly_x, poly_y;
-    if (!read_polygon(fname_scatterer, poly_x, poly_y)) {
+    if (!scatterer::read_polygon(fname_scatterer, poly_x, poly_y)) {
         std::cerr << "Error: failed to read scatterer from file" << std::endl;
         return 1;
     }
@@ -76,12 +77,10 @@ int main(int argc, char** argv) {
     unsigned Npanels;
     if (strlen(argv[6]) > 1 && argv[6][1] == '.') {
         double f = atof(argv[6]);
-        Npanels = auto_num_panels(poly_x, poly_y, f);
+        Npanels = scatterer::auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[6]);
-    using PanelVector = PanelVector;
-    PanelVector panels = make_scatterer(poly_x, poly_y, Npanels, 0.5);
-    ParametrizedMesh mesh(panels);
-    unsigned numpanels = panels.size();
+    auto mesh = scatterer::panelize(poly_x, poly_y, Npanels, 0.25);
+    unsigned numpanels = mesh.getNumPanels();
 
     // define order of quadrature rule used to compute matrix entries and which singular value to evaluate
     unsigned order = atoi(argv[7]);
@@ -118,13 +117,13 @@ int main(int argc, char** argv) {
     std::cout << "----------------------------------------------------------------" << std::endl;
     std::cout << "Finding resonances using rSVD approximation and Newton's method." << std::endl;
     std::cout << "Computing on user-defined problem using the specified domain." << std::endl;
-    std::cout << "Number of panels: " << numpanels << std::endl;
     std::cout << std::endl;
 #endif
 
 #ifdef PARALLELIZE
     auto policy = std::execution::par;
     bool profiling = false;
+    parallelize_builder(true);
 #else
     auto policy = std::execution::seq;
     unsigned total_rsvd_time = 0;
@@ -240,7 +239,11 @@ int main(int argc, char** argv) {
             }
         }
     };
-    std::for_each(policy, ind.cbegin(), ind.cend(), [&](size_t i) {
+#ifdef PARALLELIZE
+    complex_bessel::parallelize(true);
+#endif
+    std::for_each(//policy,
+                  ind.cbegin(), ind.cend(), [&](size_t i) {
         der_left[i] = sv_der(pos_left[i]);
         der_right[i] = sv_der(pos_left[i] + 2 * k_step);
         accept[i] = der_left[i] < 0. && der_right[i] > 0.;
@@ -291,7 +294,8 @@ int main(int argc, char** argv) {
     disc = 0;
     unsigned ict = 0;
     accept.resize(loc_min_count);
-    std::for_each(policy, ind.cbegin(), ind.cend(), [&](size_t i) {
+    std::for_each(//policy,
+                  ind.cbegin(), ind.cend(), [&](size_t i) {
         unsigned ic;
         bool rf = false;
         auto fn = [&](double x) {

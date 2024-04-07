@@ -1083,13 +1083,13 @@ namespace complex_bessel {
     /* Bessel functions J_v(z) and Y_v(z) */
     Cplx J(Real v,const Cplx &z,bool scaled) {
         Cplx si=sign1(imag(z))*i;
-        if (zero(arg(z)) && z.real() > 0) {
+        if (!scaled && zero(z.imag()) && z.real()>0) {
             if (zero(std::round(v)-v))
                 return jn((int)std::round(v),z.real());
             return cyl_bessel_j(v,z.real());
         }
         if (v>=0.0) {
-            if (abs(zero(arg(z))-M_PI))
+            if (!scaled && abs(zero(arg(z))-M_PI))
                 return exp(si*M_PI*v)*cyl_bessel_j(v,-real(z));
             if (v==0.0)
                 return I0_in(-z*si,scaled);
@@ -1099,7 +1099,7 @@ namespace complex_bessel {
         return exp(si*M_PI_2*v)*I_in(v,-z*si,scaled);
     }
     Cplx Y(Real v,const Cplx &z,bool scaled) {
-        if (zero(imag(z)) && z.real() > 0 && v>=0.0) {
+        if (!scaled && zero(imag(z)) && z.real()>0 && v>=0.0) {
             if (zero(std::round(v)-v))
                 return yn((int)std::round(v),z.real());
             return cyl_neumann(v,z.real());
@@ -1147,6 +1147,8 @@ namespace complex_bessel {
     }
     /* modified Bessel functions I_v(z) and K_v(z) */
     Cplx I(Real v,const Cplx &z,bool scaled) {
+        if (!scaled && zero(z.imag()) && z.real()>=0)
+            return cyl_bessel_i(v,z.real());
         if (v==0.0)
             return I0_in(z,scaled);
         if (v==1.0)
@@ -1154,6 +1156,8 @@ namespace complex_bessel {
         return I_in(v,z,scaled);
     }
     Cplx K(Real v,const Cplx &z,bool scaled) {
+        if (!scaled && zero(z.imag()) && z.real()>=0)
+            return cyl_bessel_k(v,z.real());
         if (v==0.0)
             return K0_in(z,scaled);
         if (v==1.0)
@@ -1255,12 +1259,12 @@ namespace complex_bessel {
     /* Hankel functions */
     Cplx H1(Real v,const Cplx &z,bool scaled) {
         if (v==0.0) {
-            if (zero(imag(z)))
+            if (!scaled && zero(imag(z)) && real(z)>0)
                 return Cplx(j0(real(z)),y0(real(z)));
             return H_v0(z,1,scaled);
         }
         if (v==1.0) {
-            if (zero(imag(z)))
+            if (!scaled && zero(imag(z)) && real(z)>0)
                 return Cplx(j1(real(z)),y1(real(z)));
             return H_v1(z,1,scaled);
         }
@@ -1268,12 +1272,12 @@ namespace complex_bessel {
     }
     Cplx H2(Real v,const Cplx &z,bool scaled) {
         if (v==0.0) {
-            if (zero(imag(z)))
+            if (!scaled && zero(imag(z)) && real(z)>0)
                 return Cplx(j0(real(z)),-y0(real(z)));
             return H_v0(z,2,scaled);
         }
         if (v==1.0) {
-            if (zero(imag(z)))
+            if (!scaled && zero(imag(z)) && real(z)>0)
                 return Cplx(j1(real(z)),-y1(real(z)));
             return H_v1(z,2,scaled);
         }

@@ -30,4 +30,4 @@ add_library(complex_spline STATIC cspline.cpp)
 target_link_libraries(complex_spline gsl)
 
 add_library(solvers STATIC solvers.cpp)
-target_link_libraries(solvers quadrature sol_op complex_spline scatterer)
+target_link_libraries(solvers quadrature sol_op complex_spline scatterer tbb)
