@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
 
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
-    SolutionsOperator so(builder_data, true);
+    SolutionsOperator so(builder_data);
 
     // define functions for evaluating singular values and their derivatives
     auto sv_eval = [&] (double k_in) {

@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     // Initialize operators and mesh
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
-    SolutionsOperator so(builder_data, true);
+    SolutionsOperator so(builder_data);
     Eigen::MatrixXcd T_next, T_der_next, T_der2_next;
     so.gen_sol_op_2nd_der(k_0, c_o, c_i, T_next, T_der_next, T_der2_next);
     for (unsigned j = 0; j < n_points_x; j++) {

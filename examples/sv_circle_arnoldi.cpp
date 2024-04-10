@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
-    SolutionsOperator so(builder_data, true);
+    SolutionsOperator so(builder_data);
 
     for (unsigned j = 0; j < n_points_x; j++) {
         for (unsigned k = 0; k < n_points_y; k++) {

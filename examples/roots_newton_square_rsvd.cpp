@@ -136,17 +136,15 @@ int main(int argc, char** argv) {
 
 #ifdef PARALLELIZE
     auto policy = std::execution::par;
-    bool profiling = false;
 #else
     auto policy = std::execution::seq;
     unsigned total_rsvd_time = 0;
-    bool profiling = true;
 #endif
 
     // create objects for assembling solutions operator and its derivatives
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
-    SolutionsOperator so(builder_data, profiling);
+    SolutionsOperator so(builder_data);
 #ifndef PARALLELIZE
     GalerkinMatrixBuilder builder(builder_data);
 #endif

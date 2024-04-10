@@ -19,13 +19,6 @@ class SolutionsOperator
     Eigen::PartialPivLU<Eigen::MatrixXcd> lu;
     Eigen::MatrixXd M; // mass matrix
     size_t dim_test, dim_trial;
-    // timing info
-    bool profiling, projection_enabled;
-    unsigned count[3] = {0, 0, 0};
-    unsigned total_assembly_time[3] = {0, 0, 0};
-    unsigned total_hankel_computation_time[3] = {0, 0, 0};
-    unsigned total_interaction_matrix_assembly_time[3] = {0, 0, 0};
-    unsigned total_projection_time[3] = {0, 0, 0};
     // solutions operator matrix assembly routines
     void gen_sol_op_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
                        Eigen::MatrixXcd &T);
@@ -40,9 +33,9 @@ public:
      * @param builder_data_in bulder data object
      * @param profiling_in whether to do time profiling
      */
-    SolutionsOperator(const BuilderData &builder_data_in, bool profiling_in, bool enable_projection = true);
+    SolutionsOperator(const BuilderData &builder_data_in);
     // destructor
-    ~SolutionsOperator();
+    ~SolutionsOperator() { }
     /**
      * Compute approximation of solutions operator for second-kind direct BIEs of
      * Helmholtz transmission problem using Galerkin BEM.

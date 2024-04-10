@@ -2,20 +2,20 @@
 
 ## Square scatterer
 
-The scatterer is set to a unit square with $n_i=3$ and subdivided into 800 panels. The incoming wave is a plane wave $u_{inc}(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=41.955486$ (quasi-resonance, right).
+The scatterer is set to a unit square with $n_i=3$ and subdivided into 800 panels. The incoming wave is a plane wave $u_{inc}(x)=e^{i k d\cdot x}$ where $d = (\cos{\pi\over 3},\sin{\pi\over 3})$ and $k=40$ (left) resp. $k=41.9551789362$ (quasi-resonance, right).
 
 <p align='center'>
   <img width='500' src='3.0_40.0.gif'>
-  <img width='500' src='3.0_41.955486 (quasi-res).gif'>
+  <img width='500' src='3.0_41.9551789362 (quasi-res).gif'>
 </p>
 
 ## Hollow box scatterer with a hole
 
-A hollow box with a small hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=100$ and $k=81.8$ (left) resp. $k=82.256558$ (quasi-resonance, right). 1000 panels and a plane wave incoming from below are used.
+A hollow box with a small hole and the scattered wave for a non-resonant resp. near-resonant $k$ are shown below. Here, $n_i=100$ and $k=81.8$ (left) resp. $k=82.2650447671$ (quasi-resonance, right). 1000 panels and a plane wave incoming from below are used.
 
 <p align='center'>
   <img width='500' src='100.0_81.8.gif'>
-  <img width='500' src='100.0_82.256558 (quasi-res).gif'>
+  <img width='500' src='100.0_82.2650447671 (quasi-res).gif'>
 </p>
 
 ## Analytical solution on circle
