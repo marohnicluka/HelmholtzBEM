@@ -327,6 +327,16 @@ This target builds a script that computes minimas in the smallest singular value
 ~~~
 The resulting file will contain the boundaries of the interval used to compute the root in the first two columns, which are obtained by approximating the smallest singular value with randomized SVD. Then in the next two columns will be the point and the respective function value. The last column will contain the number of iterations used to find the root. The singular values are computed using the Arnoldi algorithm. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
+#### <tt>roots_brent_polygon_rsvd</tt>
+This target builds a script that computes minimas in the smallest singular value of the Galerkin BEM approximated solutions operator for the sedond-kind direct BIEs of the Helmholtz transmission problem using Brent's method without derivatives. The scatterer is a polygon read from disk (see <tt>scatterer.hpp</tt> for a description of the input file syntax). The results are written to the <tt>data</tt> directory. The script can be run as follows:
+~~~
+/path/to/library/bin/roots_brent_square_rsvd <scatterer filename>
+    <refraction inside> <refraction outside> <initial wavenumber>
+    <#grid points for root search> <#panels> <quadrature order>
+    <accuracy> <#subspace iterations>
+~~~
+The resulting file will contain the local minima in a single column. The singular values are computed using the randomized SVD algorithm with the specified number of subspace iterations. The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
+
 #### <tt>roots_mixed_circle_arnoldi</tt>
 This target builds a script that computes minimas in the smallest singular value of the
 Galerkin BEM approximated solutions operator for the second-kind direct BIEs of the Helmholtz
