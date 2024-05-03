@@ -30,6 +30,7 @@
 #include <execution>
 #include <algorithm>
 #include <string>
+#include <Eigen/Core>
 #include "parametrized_line.hpp"
 //#include "singular_values_arnoldi.hpp"
 #include "gen_sol_op.hpp"
@@ -55,6 +56,8 @@ int main(int argc, char** argv) {
         std::cerr << "Error: too many input arguments" << std::endl;
         return 1;
     }
+
+    Eigen::initParallel();
 
     // define the side of square, refraction index and initial wavenumber
     double c_i = atof(argv[2]);
@@ -115,7 +118,6 @@ int main(int argc, char** argv) {
 #endif
 
     auto policy = std::execution::par;
-    parallelize_builder(true);
     ContinuousSpace<1> cont_space;
 
     std::vector<size_t> ind(n_points_k);

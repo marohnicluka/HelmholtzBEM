@@ -32,6 +32,7 @@
 #include <execution>
 #include <string>
 #include <sstream>
+#include <Eigen/Core>
 #include "parametrized_line.hpp"
 #include "solvers.hpp"
 #include "cbessel.hpp"
@@ -54,6 +55,8 @@ int main(int argc, char** argv) {
         std::cerr << "Error: too many input arguments" << std::endl;
         return 1;
     }
+
+    Eigen::initParallel();
 
     // read filenames for obstacle and incoming wave
     string fname_scatterer = argv[1], fname_incoming = argv[2];
@@ -147,14 +150,10 @@ int main(int argc, char** argv) {
         return incoming::compute_del(u_inc_spec, Eigen::Vector2d(x1, x2), k);
     };
 
-    // enable parallelization
-    complex_bessel::parallelize(true);
-    parallelize_builder(true);
-
     auto tic = high_resolution_clock::now();
 
     Eigen::ArrayXXd grid_X, grid_Y;
-    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 11, order, k, c_o, c_i,
+    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
                                                                     lower_left_corner, upper_right_corner, grid_size, grid_size,
                                                                     grid_X, grid_Y, add_u_inc);
 

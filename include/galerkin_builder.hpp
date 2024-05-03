@@ -1,5 +1,5 @@
 /**
- * \file galerkin_matrix_builder.hpp
+ * \file galerkin_builder.hpp
  * \brief This file declares the object to evaluate the entries of
  *        Galerkin matrices by using common and composite
  *        Gauss-Legendre quadrature rules.
@@ -14,10 +14,6 @@
 #include "abstract_bem_space.hpp"
 #include "abstract_parametrized_curve.hpp"
 #include "gauleg.hpp"
-
-typedef std::complex<double> complex_t;
-
-void parallelize_builder(bool yes);
 
 class BuilderData
 {
@@ -85,12 +81,12 @@ public:
     size_t getCGaussQROrder() const { return CGaussQR.n; }
 };
 
-class GalerkinMatrixBuilder
+class GalerkinBuilder
 {
     // builder data object
     const BuilderData &data;
     // wavenumber and refraction index
-    complex_t k, ksqrtc, kkc;
+    std::complex<double> k, ksqrtc, kkc;
     double c, sqrtc, ksqrtca;
     bool k_real_positive;
     // timing info
@@ -100,8 +96,11 @@ class GalerkinMatrixBuilder
     Eigen::ArrayXXd m_zero, m_zero_s;
     Eigen::ArrayXXcd m_h0[2], m_h1[2], m_v[2], m_tangent[2], m_tangent_p[2], masked1[2], masked2[2], masked3[2];
     Eigen::ArrayXXcd m_h0_s, m_h1_s, m_v_s, m_tangent_s, m_tangent_p_s, masked1_s, masked2_s, masked3_s;
-    Eigen::ArrayXXd m_v_norm[2], m_v_norm2[2], m_tangent_norm[2], m_tangent_p_norm[2];
-    Eigen::ArrayXXd m_v_norm_s, m_v_norm2_s, m_tangent_norm_s, m_tangent_p_norm_s;
+    Eigen::ArrayXXd m_v_norm[2], m_v_norm2[2], m_tangent_norm[2], m_tangent_p_norm[2], bessel_ws[18];
+    Eigen::ArrayXXd m_v_norm_s, m_v_norm2_s, m_tangent_norm_s, m_tangent_p_norm_s, bessel_ws_s[18];
+    Eigen::ArrayXXd vdotn, tdottp, ttp_norm, cfr1, cfr2, cfr3, temp;
+    Eigen::ArrayXXd vdotn_s, tdottp_s, ttp_norm_s, cfr1_s, cfr2_s, cfr3_s, temp_s;
+    Eigen::ArrayXXcd cf, cf_s, masked1_hg, masked1_hg_s, masked2_g, masked3_g, masked2_g_s, masked3_g_s;
     // interaction matrices
     Eigen::ArrayXXcd double_layer_interaction_matrix, hypersingular_interaction_matrix, single_layer_interaction_matrix;
     Eigen::ArrayXXcd double_layer_der_interaction_matrix, hypersingular_der_interaction_matrix, single_layer_der_interaction_matrix;
@@ -110,6 +109,9 @@ class GalerkinMatrixBuilder
     Eigen::MatrixXcd double_layer_matrix, hypersingular_matrix, single_layer_matrix;
     Eigen::MatrixXcd double_layer_der_matrix, hypersingular_der_matrix, single_layer_der_matrix;
     Eigen::MatrixXcd double_layer_der2_matrix, hypersingular_der2_matrix, single_layer_der2_matrix;
+    // Local-global map
+    unsigned test_space_map(unsigned I, unsigned i) { return data.test_space.LocGlobMap(I + 1, i + 1, data.getTestSpaceDimension()) - 1; }
+    unsigned trial_space_map(unsigned I, unsigned i) { return data.trial_space.LocGlobMap(I + 1, i + 1, data.getTrialSpaceDimension()) - 1; }
     // routines for computing shared data
     void compute_coinciding(size_t i) throw();
     void compute_adjacent(size_t i, size_t j, bool swap) throw();
@@ -134,7 +136,7 @@ public:
      * Construct the Galerkin matrix builder from the given parameters.
      * @param builder_data the Galerkin builder data object
      */
-    GalerkinMatrixBuilder(const BuilderData &builder_data);
+    GalerkinBuilder(const BuilderData &builder_data);
     /**
      * Get the DER-th derivative of the previously assembled K submatrix.
      * @param der the order of derivative (default 0)

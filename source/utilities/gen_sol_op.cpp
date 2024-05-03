@@ -22,22 +22,22 @@ SolutionsOperator::SolutionsOperator(const BuilderData &builder_data_in)
         (llt.transpositionsP().transpose() * llt.matrixL().toDenseMatrix() * llt.vectorD().cwiseSqrt().asDiagonal());
 }
 
-Eigen::MatrixXcd SolutionsOperator::project(const Eigen::MatrixXcd &T) const {
+Eigen::MatrixXcd SolutionsOperator::projection(const Eigen::MatrixXcd &T) const {
     return lu.solve(lu.solve(T).transpose().eval()).transpose().eval();
 }
 
 void SolutionsOperator::gen_sol_op(const complex_t &k, double c_o, double c_i,
                                    Eigen::MatrixXcd &T) {
-    GalerkinMatrixBuilder builder(builder_data);
+    GalerkinBuilder builder(builder_data);
     gen_sol_op_in(builder, k, c_o, c_i, T);
 }
 
-void SolutionsOperator::gen_sol_op(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                    Eigen::MatrixXcd &T) {
     gen_sol_op_in(builder, k, c_o, c_i, T);
 }
 
-void SolutionsOperator::gen_sol_op_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op_in(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                       Eigen::MatrixXcd &T) {
     T.resize(dim_test + dim_trial, dim_trial + dim_test);
     Eigen::MatrixXcd K_i, K_o, V_i, V_o, W_i, W_o;
@@ -71,21 +71,21 @@ void SolutionsOperator::gen_sol_op_in(GalerkinMatrixBuilder &builder, const comp
     T.block(0, dim_trial, dim_test, dim_test) = V_o - V_i;
     T.block(dim_test, dim_trial, dim_trial, dim_test) = (M + K_o - K_i).transpose();
     // project onto orthogonal FEM spaces
-    T = project(T);
+    T = projection(T);
 }
 
 void SolutionsOperator::gen_sol_op_1st_der(const complex_t &k, double c_o, double c_i,
                                            Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der) {
-    GalerkinMatrixBuilder builder(builder_data);
+    GalerkinBuilder builder(builder_data);
     gen_sol_op_1st_der_in(builder, k, c_o, c_i, T, T_der);
 }
 
-void SolutionsOperator::gen_sol_op_1st_der(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op_1st_der(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                            Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der) {
     gen_sol_op_1st_der_in(builder, k, c_o, c_i, T, T_der);
 }
 
-void SolutionsOperator::gen_sol_op_1st_der_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op_1st_der_in(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                               Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der) {
     T.resize(dim_test + dim_trial, dim_trial + dim_test);
     T_der.resize(dim_test + dim_trial, dim_trial + dim_test);
@@ -136,22 +136,22 @@ void SolutionsOperator::gen_sol_op_1st_der_in(GalerkinMatrixBuilder &builder, co
     T_der.block(0, dim_trial, dim_test, dim_test) = V_der_o - V_der_i;
     T_der.block(dim_test, dim_trial, dim_trial, dim_test) = (K_der_o - K_der_i).transpose();
     // project onto orthogonal FEM spaces
-    T = project(T);
-    T_der = project(T_der);
+    T = projection(T);
+    T_der = projection(T_der);
 }
 
 void SolutionsOperator::gen_sol_op_2nd_der(const complex_t &k, double c_o, double c_i,
                                            Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2) {
-    GalerkinMatrixBuilder builder(builder_data);
+    GalerkinBuilder builder(builder_data);
     gen_sol_op_2nd_der_in(builder, k, c_o, c_i, T, T_der, T_der2);
 }
 
-void SolutionsOperator::gen_sol_op_2nd_der(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op_2nd_der(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                            Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2) {
     gen_sol_op_2nd_der_in(builder, k, c_o, c_i, T, T_der, T_der2);
 }
 
-void SolutionsOperator::gen_sol_op_2nd_der_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+void SolutionsOperator::gen_sol_op_2nd_der_in(GalerkinBuilder &builder, const complex_t &k, double c_o, double c_i,
                                               Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2) {
     T.resize(dim_test + dim_trial, dim_trial + dim_test);
     T_der.resize(dim_test + dim_trial, dim_trial + dim_test);
@@ -220,7 +220,7 @@ void SolutionsOperator::gen_sol_op_2nd_der_in(GalerkinMatrixBuilder &builder, co
     T_der2.block(0, dim_trial, dim_test, dim_test) = V_der2_o - V_der2_i;
     T_der2.block(dim_test, dim_trial, dim_trial, dim_test) = (K_der2_o - K_der2_i).transpose();
     // project onto orthogonal FEM spaces
-    T = project(T);
-    T_der = project(T_der);
-    T_der2 = project(T_der2);
+    T = projection(T);
+    T_der = projection(T_der);
+    T_der2 = projection(T_der2);
 }

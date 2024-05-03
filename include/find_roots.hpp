@@ -16,6 +16,8 @@
 #include <vector>
 #include <iomanip>
 #include <ostream>
+#include <thread>
+#include <mutex>
 #include "operators.hpp"
 
 /**
@@ -184,7 +186,9 @@ class BrentMinimizer {
     // workspace
     double arg, a, b, c, d, e, fu, fv, fw, fx, midpoint, p, q, r, tol1, tol2, u, v, w, x;
     double sign(double x) { return x < 0.0 ? -1.0 : 1.0; }
+
 public:
+
     /**
      * This constructs Brent minimizer with the given precision
      * on the given interval.
@@ -193,6 +197,7 @@ public:
      * @param tol_in tolerance
      */
     BrentMinimizer(double a_in, double b_in, double tol_in) : A(a_in), B(b_in), tol(tol_in) { eps = sqrt(tol); }
+
     /**
      * This routine seeks an approximation to the point where a function
      * F attains a minimum on the interval (A,B).
@@ -224,7 +229,45 @@ public:
      * on the previous call.
      * @return estimated minimizer
      */
-     double local_min_rc (int &status, double value);
+    double local_min_rc (int &status, double value);
 };
+
+/**
+ * This class implements an algorithm for finding all minima in the given interval.
+ * The basic routine is Brent minimizer.
+ */
+class BrentMinimaFinder {
+    const std::function<double(double)> &f;
+    std::mutex mtx;
+    unsigned nthreads, thread_count, eval_count;
+    std::vector<double> minima;
+    void _find_minima(double a, double b, double tol);
+
+public:
+
+    BrentMinimaFinder(const std::function<double(double)> &f_in) : f(f_in) { }
+    const std::vector<double> &find_minima(double a, double b, double tol, bool par = false);
+    unsigned get_eval_count() const { return eval_count; }
+};
+
+/**
+ * Source: NUMERICAL RECIPES IN FORTRAN 77: THE ART OF SCIENTIFIC COMPUTING (ISBN 0-521-43064-X), Chapter 10
+ */
+double brent_guess(double a, double b, double guess, double fguess, const std::function<double(double)> &f, double tol, unsigned int &ic);
+double dbrent_guess(double a, double b, double guess, const std::function<Eigen::Vector2d(double)> &f_df, double tol, unsigned int &ic);
+
+/**
+ * This routine wraps the Brent minimizer in GSL.
+ */
+double brent_gsl(double a, double b, double guess, std::function<double(double)> &f, double tol, unsigned int &ic,
+                 std::function<void(double)> *rp = NULL, std::function<void(double,double)> *rv = NULL);
+double brent_gsl_with_values(double a, double fa, double b, double fb, double guess, double fguess,
+                             std::function<double(double)> &f, double tol, unsigned int &ic);
+
+/**
+ * Paper: doi.org/10.1007/BF01585172
+ */
+double mifflin_five_point(double a, double fa, double b, double fb, double guess, double fguess,
+                          std::function<double(double)> &f, double tol, unsigned int &ic);
 
 #endif //FIND_ROOTSHPP

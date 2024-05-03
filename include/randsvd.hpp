@@ -18,6 +18,17 @@
 namespace randomized_svd {
 
     /**
+     * Timing info
+     */
+    void benchmarking(bool yes);
+    double get_lu_time();
+    double get_qr_time();
+    double get_sub_iter_time();
+    double get_svd_time();
+    void reset_timer();
+
+
+    /**
     * This function creates a random Gaussian matrix with the specified
     * number of rows and columns. The distribution is standard normal N(0,1).
     *

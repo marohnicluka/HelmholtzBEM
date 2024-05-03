@@ -10,7 +10,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
-#include "galerkin_matrix_builder.hpp"
+#include "galerkin_builder.hpp"
 #include "parametrized_circular_arc.hpp"
 #include "abstract_bem_space.hpp"
 #include "continuous_space.hpp"
@@ -38,7 +38,7 @@ ParametrizedMesh mesh(curve.split(numpanels));
 unsigned order = 11;
 
 BuilderData builder_data(mesh, discont_space, cont_space, order);
-GalerkinMatrixBuilder builder(builder_data);
+GalerkinBuilder builder(builder_data);
 Eigen::VectorXcd K;
 
 // set variables for reading operator from file

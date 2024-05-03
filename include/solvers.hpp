@@ -11,7 +11,7 @@
 #define SOLVERSHPP
 
 #include "parametrized_mesh.hpp"
-#include "galerkin_matrix_builder.hpp"
+#include "galerkin_builder.hpp"
 /**
  * \namespace bvp
  * \brief This namespace contains solvers for boundary value problems.
@@ -71,6 +71,14 @@ namespace tp {
      * The solver uses the lowest order BEM spaces for computation.
      */
     namespace direct_second_kind {
+
+        template <typename T>
+        struct PairInc: std::pair<T,T> {
+            T _m;
+            PairInc(T first, T second, T first_max): std::pair<T,T>(first, second) { _m=first_max; }
+            PairInc& operator++() { if (this->first+1==_m) { ++this->second; this->first=0; } else ++this->first; return *this; }
+        };
+
         /**
          * This function returns the solution to the Helmholtz transmission problem
          * on boundary given by \p mesh for an incoming wave defined by \p u_inc_dir and
@@ -177,7 +185,7 @@ namespace tp {
                                Eigen::ArrayXXd &grid_X,
                                Eigen::ArrayXXd &grid_Y,
                                bool total_field,
-                               GalerkinMatrixBuilder &builder,
+                               GalerkinBuilder &builder,
                                Eigen::MatrixXcd &so);
     } // namespace direct_second_kind
 } // namespace tp

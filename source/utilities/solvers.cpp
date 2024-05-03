@@ -30,7 +30,7 @@ namespace bvp {
             // compute operators for first kind direct Dirichlet problem BIE
             Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh, discont_space, cont_space, GaussQR);
             BuilderData builder_data(mesh, cont_space, discont_space, order);
-            GalerkinMatrixBuilder builder(builder_data);
+            GalerkinBuilder builder(builder_data);
             builder.assembleDoubleLayer(k, 1.);
             Eigen::MatrixXcd K = builder.getDoubleLayer();
             builder.assembleSingleLayer(k, 1.);
@@ -56,7 +56,7 @@ namespace bvp {
             // compute operators for first kind direct Neumann problem BIE
             Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh, cont_space, discont_space, GaussQR);
             BuilderData builder_data(mesh, discont_space, cont_space, order);
-            GalerkinMatrixBuilder builder(builder_data);
+            GalerkinBuilder builder(builder_data);
             builder.assembleDoubleLayer(k, 1.);
             Eigen::MatrixXcd K = builder.getDoubleLayer();
             builder.assembleHypersingular(k, 1.);
@@ -78,7 +78,7 @@ namespace tp {
                                    const std::complex<double> &k,
                                    const double c_o,
                                    const double c_i,
-                                   GalerkinMatrixBuilder &builder,
+                                   GalerkinBuilder &builder,
                                    Eigen::MatrixXcd &A) {
             builder.assembleAll(k, c_o);
             Eigen::MatrixXcd K_o = builder.getDoubleLayer();
@@ -126,7 +126,7 @@ namespace tp {
             QuadRule GaussQR = getGaussQR(order, 0., 1.);
             ContinuousSpace<1> cont_space;
             BuilderData builder_data(mesh, cont_space, cont_space, order);
-            GalerkinMatrixBuilder builder(builder_data);
+            GalerkinBuilder builder(builder_data);
             Eigen::MatrixXcd so;
             return in_traces(mesh, u_inc, u_inc_del, k, c_o, c_i, builder, so);
         }
@@ -154,21 +154,16 @@ namespace tp {
             grid_Y.resize(grid_size_x, grid_size_y);
             QuadRule qr = getGaussQR(order, 0., 1.);
             size_t n = qr.n;
-            Eigen::ArrayXXcd Y, Z, H0, H1, Trace_i_D, Trace_i_N, Trace_o_D, Trace_o_N, N, G;
-            Eigen::ArrayXXd X, D;
+            Eigen::ArrayXXcd Y, Trace_i_D, Trace_i_N, Trace_o_D, Trace_o_N, N;
+            Eigen::ArrayXXd D;
             unsigned numpanels = mesh.getNumPanels();
-            X.resize(numpanels, n);
             Y.resize(numpanels, n);
-            Z.resize(numpanels, n);
-            H0.resize(numpanels, n);
-            H1.resize(numpanels, n);
             Trace_i_D.resize(numpanels, n);
             Trace_i_N.resize(numpanels, n);
             Trace_o_D.resize(numpanels, n);
             Trace_o_N.resize(numpanels, n);
             D.resize(numpanels, n);
             N.resize(numpanels, n);
-            G.resize(numpanels, n);
             double t0 = 0., t1, width = upper_right_corner(0) - lower_left_corner(0);
             double height = upper_right_corner(1) - lower_left_corner(1);
             for (unsigned i = 0; i < numpanels; ++i) {
@@ -196,27 +191,29 @@ namespace tp {
             complex_t k_sqrt_ci = k * std::sqrt(c_i), k_sqrt_co = k * std::sqrt(c_o), kappa;
             bool inside, k_real_positive = k.imag() == 0 && k.real() > 0;
             unsigned done = 0;
-            std::mutex mtx;
-            std::vector<std::pair<size_t,size_t> > ind(grid_size_x * grid_size_y);
-            std::iota(ind.begin(), ind.end(), complex_bessel::PairInc<size_t>(0, 0, grid_size_x));
-            for_each (//std::execution::par,
-                      ind.cbegin(), ind.cend(), [&](const std::pair<size_t, size_t> &IJ) {
-                unsigned I = IJ.first, J = IJ.second;
-                unsigned prog = (100 * (++done)) / (grid_size_x * grid_size_y);
+            std::vector<std::pair<std::pair<size_t,size_t>,complex_t> > comp;
+            comp.reserve(grid_size_x * grid_size_y);
+            // workspace
+            Eigen::ArrayXXcd Z, H0, H1, G;
+            Eigen::ArrayXXd X;
+            H0.resize(numpanels, n);
+            H1.resize(numpanels, n);
+            std::vector<std::pair<size_t,size_t> > ind(numpanels * n);
+            std::iota(ind.begin(), ind.end(), PairInc<size_t>(0, 0, numpanels));
+            for (size_t I = 0; I < grid_size_x; ++I) for (size_t J = 0; J < grid_size_y; ++J) {
+                unsigned i, prog = (100 * (++done)) / (grid_size_x * grid_size_y);
 #ifdef CMDL
-                mtx.lock();
                 auto pstr = std::to_string(prog);
                 std::cout << "\rLifting solution from traces... " << pstr << "%" << std::string(3 - pstr.length(), ' ');
                 std::flush(std::cout);
-                mtx.unlock();
 #endif
                 Eigen::Vector2d x;
                 x << lower_left_corner(0) + I * x_step, lower_left_corner(1) + J * y_step;
                 grid_X(I, J) = x(0);
                 grid_Y(I, J) = x(1);
-                unsigned i;
-                if (scatterer::distance(mesh, x, &i, &t0) < 1e-8) { // on the boundary
-                    double len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t0 * mesh.getPanels()[i]->length();
+                double t0L;
+                if (scatterer::distance(mesh, x, &i, &t0L) < 1e-8) { // on the boundary
+                    double len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t0L * mesh.getPanels()[i]->length();
                     S(I, J) = trace_dir.eval(len);
                 } else {
                     inside = scatterer::inside_poly(mesh, x);
@@ -224,10 +221,13 @@ namespace tp {
 #ifndef EXTERNAL_INTEGRATION
                     Z = Y + x(0) + 1i * x(1);
                     X = Z.cwiseAbs();
-                    if (k_real_positive)
-                        complex_bessel::H1_01(kappa.real() * X, H0, H1);
-                    else
-                        complex_bessel::H1_01_cplx(kappa * X, H0, H1);
+                    if (k_real_positive) {
+                        for_each(std::execution::par_unseq, ind.cbegin(), ind.cend(), [&](const auto &ij) {
+                            size_t ii = ij.first, jj = ij.second;
+                            complex_bessel::H1_01(kappa.real() * X(ii, jj), H0(ii, jj), H1(ii, jj));
+                        });
+                    } else
+                        complex_bessel::H1_01_cplx<Eigen::Dynamic>(kappa * X, H0, H1);
                     G = (H0 * (inside ? Trace_i_N : Trace_o_N)
                         - kappa * H1 * (inside ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
                     S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * G.sum();
@@ -238,7 +238,13 @@ namespace tp {
                         auto func = [&](double t) {
                             Eigen::Vector2d y = panel[t], tangent = panel.Derivative_01(t), normal_o;
                             double d = (x - y).norm(), len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t * panel.length();
-                            complex_t h0 = complex_bessel::H1(0, kappa * d), h1 = complex_bessel::H1(1, kappa * d), tD, tN;
+                            complex_t h0, h1, tD, tN;
+                            if (k_real_positive) {
+                                complex_bessel::H1_01(kappa.real() * d, h0, h1);
+                            } else {
+                                h0 = complex_bessel::H1(0, kappa * d);
+                                h1 = complex_bessel::H1(1, kappa * d);
+                            }
                             tD = trace_dir.eval(len);
                             tN = trace_neu.eval(len);
                             normal_o << tangent(1), -tangent(0);
@@ -253,10 +259,10 @@ namespace tp {
                     }
                     S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * z;
 #endif
-                    if (add_u_inc && inside)
+                    if (add_u_inc && !inside)
                         S(I, J) += u_inc(x(0), x(1));
                 }
-            });
+            }
 #ifdef CMDL
             std::cout << std::endl;
 #endif
@@ -276,7 +282,7 @@ namespace tp {
                                             Eigen::ArrayXXd &grid_X,
                                             Eigen::ArrayXXd &grid_Y,
                                             bool total_field,
-                                            GalerkinMatrixBuilder &builder,
+                                            GalerkinBuilder &builder,
                                             Eigen::MatrixXcd &so) {
 #ifdef CMDL
             std::cout << "Computing boundary traces..." << std::endl;

@@ -155,7 +155,7 @@ int main(int argc, char** argv) {
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
     SolutionsOperator so(builder_data);
-    GalerkinMatrixBuilder builder(builder_data);
+    GalerkinBuilder builder(builder_data);
 
     std::iota(ind.begin(), ind.end(), 0);
     auto tic = high_resolution_clock::now();

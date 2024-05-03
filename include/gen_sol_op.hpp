@@ -11,7 +11,7 @@
 #ifndef GEN_SOL_OPHPP
 #define GEN_SOL_OPHPP
 
-#include "galerkin_matrix_builder.hpp"
+#include "galerkin_builder.hpp"
 
 class SolutionsOperator
 {
@@ -20,11 +20,11 @@ class SolutionsOperator
     Eigen::MatrixXd M; // mass matrix
     size_t dim_test, dim_trial;
     // solutions operator matrix assembly routines
-    void gen_sol_op_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+    void gen_sol_op_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                        Eigen::MatrixXcd &T);
-    void gen_sol_op_1st_der_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+    void gen_sol_op_1st_der_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                                Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der);
-    void gen_sol_op_2nd_der_in(GalerkinMatrixBuilder &builder, const complex_t &k, double c_o, double c_i,
+    void gen_sol_op_2nd_der_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                                Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2);
 
 public:
@@ -57,7 +57,7 @@ public:
      * @param c_i refraction indef of inner domain (must not be smaller than c_o)
      * @param T complex matrix to which the solutions operator matrix will be stored
      */
-    void gen_sol_op(GalerkinMatrixBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
+    void gen_sol_op(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                     Eigen::MatrixXcd &T);
     /**
      * Compute approximation of solutions operator and its 1st derivative
@@ -82,7 +82,7 @@ public:
      * @param T complex matrix to which the solutions operator matrix will be stored
      * @param T_der complex matrix to which the 1st derivative of the solutions operator matrix will be stored
      */
-    void gen_sol_op_1st_der(GalerkinMatrixBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
+    void gen_sol_op_1st_der(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                             Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der);
     /**
      * Compute approximation of solutions operator and its 1st and 2nd derivatives
@@ -109,13 +109,13 @@ public:
      * @param T_der complex matrix to which the 1st derivative of the solutions operator matrix will be stored
      * @param T_der2 complex matrix to which the 2nd derivative of the solutions operator matrix will be stored
      */
-    void gen_sol_op_2nd_der(GalerkinMatrixBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
+    void gen_sol_op_2nd_der(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                             Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2);
     /**
      * Return reference to the mass matrix.
      */
     const Eigen::MatrixXd &mass_matrix() const { return M; };
-    Eigen::MatrixXcd project(const Eigen::MatrixXcd &T) const;
+    Eigen::MatrixXcd projection(const Eigen::MatrixXcd &T) const;
 };
 
 #endif //GEN_SOL_OPHPP

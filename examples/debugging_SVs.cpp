@@ -20,7 +20,7 @@
 #include "parametrized_circular_arc.hpp"
 #include "solvers.hpp"
 #include "continuous_space.hpp"
-#include "galerkin_matrix_builder.hpp"
+#include "galerkin_builder.hpp"
 
 // defince shorthand for compley data type and immaginary unit
 typedef std::complex<double> complex_t;
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         ParametrizedMesh mesh(curve.split(numpanels[i]));
 
         BuilderData builder_data(mesh, cont_space, cont_space, order);
-        GalerkinMatrixBuilder builder(builder_data);
+        GalerkinBuilder builder(builder_data);
 
         // compute EVs for each BIO at this resolution
         file_out << "Single Layer BIO" << std::endl;

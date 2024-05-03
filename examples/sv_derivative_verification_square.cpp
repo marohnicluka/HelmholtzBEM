@@ -40,7 +40,7 @@ typedef std::complex<double> complex_t;
 complex_t ii = complex_t(0,1.);
 
 // tolerance for computing derivative by extrapolation
-double epsilon = 1e-6;
+double eps_mach = 1e-6;
 
 int main(int argc, char** argv) {
 
@@ -165,8 +165,8 @@ int main(int argc, char** argv) {
                 };
 
                 // compute derivatives by extrapolation
-                double sv_ext_der1 =  direct::der_by_ext(sv_eval,k_temp.real(),epsilon,epsilon,h_x*epsilon);
-                double sv_ext_der2 =  direct::der_by_ext(sv_eval_der,k_temp.real(),epsilon,epsilon,h_x*epsilon);
+                double sv_ext_der1 =  direct::der_by_ext(sv_eval,k_temp.real(),eps_mach,eps_mach,h_x*eps_mach);
+                double sv_ext_der2 =  direct::der_by_ext(sv_eval_der,k_temp.real(),eps_mach,eps_mach,h_x*eps_mach);
 
                 // write results to file
                 filename.open(argv[7], std::ios_base::app);

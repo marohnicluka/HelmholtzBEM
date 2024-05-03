@@ -4,6 +4,8 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <gsl/gsl_min.h>
+#include <gsl/gsl_errno.h>
 #include "find_roots.hpp"
 
 #define MAXIT 1000
@@ -996,185 +998,613 @@ double secant_method(const function<double(double)> f,
 }
 
 double BrentMinimizer::local_min_rc (int &status, double value) {
-//
-//  STATUS (INPUT) = 0, startup.
-//
-  if ( status == 0 )
-  {
-    a = A;
-    b = B;
-    if ( b <= a )
+    //
+    //  STATUS (INPUT) = 0, startup.
+    //
+    if ( status == 0 )
     {
-      throw std::runtime_error("a < b is required for Brent algorithm!");
-    }
-    c = 0.5 * ( 3.0 - sqrt ( 5.0 ) );
+        a = A;
+        b = B;
+        if ( b <= a )
+        {
+            throw std::runtime_error("a < b is required for Brent algorithm!");
+        }
+        c = 0.5 * ( 3.0 - sqrt ( 5.0 ) );
 
-    v = a + c * ( b - a );
+        v = a + c * ( b - a );
+        w = v;
+        x = v;
+        e = 0.0;
+
+        status = 1;
+        arg = x;
+
+        return arg;
+    }
+    //
+    //  STATUS (INPUT) = 1, return with initial function value of FX.
+    //
+    else if ( status == 1 )
+    {
+        fx = value;
+        fv = fx;
+        fw = fx;
+    }
+    //
+    //  STATUS (INPUT) = 2 or more, update the data.
+    //
+    else if ( 2 <= status )
+    {
+        fu = value;
+
+        if ( fu <= fx )
+        {
+            if ( x <= u )
+            {
+                a = x;
+            }
+            else
+            {
+                b = x;
+            }
+            v = w;
+            fv = fw;
+            w = x;
+            fw = fx;
+            x = u;
+            fx = fu;
+        }
+        else
+        {
+            if ( u < x )
+            {
+                a = u;
+            }
+            else
+            {
+                b = u;
+            }
+
+            if ( fu <= fw || w == x )
+            {
+                v = w;
+                fv = fw;
+                w = u;
+                fw = fu;
+            }
+            else if ( fu <= fv || v == x || v == w )
+            {
+                v = u;
+                fv = fu;
+            }
+        }
+    }
+    //
+    //  Take the next step.
+    //
+    midpoint = 0.5 * ( a + b );
+    tol1 = eps * fabs ( x ) + tol / 3.0;
+    tol2 = 2.0 * tol1;
+    //
+    //  If the stopping criterion is satisfied, we can exit.
+    //
+    if ( fabs ( x - midpoint ) <= ( tol2 - 0.5 * ( b - a ) ) )
+    {
+        status = 0;
+        return arg;
+    }
+    //
+    //  Is golden-section necessary?
+    //
+    if ( fabs ( e ) <= tol1 )
+    {
+        if ( midpoint <= x )
+        {
+            e = a - x;
+        }
+        else
+        {
+            e = b - x;
+        }
+        d = c * e;
+    }
+    //
+    //  Consider fitting a parabola.
+    //
+    else
+    {
+        r = ( x - w ) * ( fx - fv );
+        q = ( x - v ) * ( fx - fw );
+        p = ( x - v ) * q - ( x - w ) * r;
+        q = 2.0 * ( q - r );
+        if ( 0.0 < q )
+        {
+            p = - p;
+        }
+        q = fabs ( q );
+        r = e;
+        e = d;
+        //
+        //  Choose a golden-section step if the parabola is not advised.
+        //
+        if (
+            ( fabs ( 0.5 * q * r ) <= fabs ( p ) ) ||
+            ( p <= q * ( a - x ) ) ||
+            ( q * ( b - x ) <= p ) )
+        {
+            if ( midpoint <= x )
+            {
+                e = a - x;
+            }
+            else
+            {
+                e = b - x;
+            }
+            d = c * e;
+        }
+        //
+        //  Choose a parabolic interpolation step.
+        //
+        else
+        {
+            d = p / q;
+            u = x + d;
+
+            if ( ( u - a ) < tol2 )
+            {
+                d = tol1 * sign ( midpoint - x );
+            }
+
+            if ( ( b - u ) < tol2 )
+            {
+                d = tol1 * sign ( midpoint - x );
+            }
+        }
+    }
+    //
+    //  F must not be evaluated too close to X.
+    //
+    if ( tol1 <= fabs ( d ) )
+    {
+        u = x + d;
+    }
+    if ( fabs ( d ) < tol1 )
+    {
+        u = x + tol1 * sign ( d );
+    }
+    //
+    //  Request value of F(U).
+    //
+    arg = u;
+    status = status + 1;
+
+    return arg;
+}
+
+const std::vector<double> & BrentMinimaFinder::find_minima(double a, double b, double tol, bool par) {
+    nthreads = par ? std::thread::hardware_concurrency() : 0;
+#ifdef CMDL
+    if (par && !nthreads)
+        std::cerr << "Warning: failed to get the maximum number of concurrent threads" << std::endl;
+#endif
+    thread_count = 0;
+    eval_count = 0;
+    minima.clear();
+    _find_minima(a, b, tol);
+    return minima;
+}
+
+void BrentMinimaFinder::_find_minima(double a, double b, double tol) {
+    if (b - a < tol)
+        return;
+    BrentMinimizer br(a, b, std::numeric_limits<double>::epsilon());
+    int status = 0;
+    double arg = br.local_min_rc(status, 0.);
+    while (status) {
+        double v = -f(arg);
+        ++eval_count;
+        arg = br.local_min_rc(status, v);
+    }
+    if (std::abs(arg - a) < tol || std::abs(arg - b) < tol) {
+        // no maximum, find minimum if it exists
+        status = 0;
+        arg = br.local_min_rc(status, 0.);
+        while (status) {
+            double v = f(arg);
+            ++eval_count;
+            arg = br.local_min_rc(status, v);
+        }
+        if (std::abs(arg - a) > tol && std::abs(arg - b) > tol) {
+            // minimum found
+            minima.push_back(arg);
+            std::cout << "minimum found: " << arg << " in [" << a << ", " << b << "]" << std::endl;
+        }
+    } else {
+        // maximum found
+        std::cout << "maximum found: " << arg << " in [" << a << ", " << b << "]" << std::endl;
+        _find_minima(a, arg - tol / 2., tol);
+        _find_minima(arg + tol / 2., b, tol);
+    }
+}
+
+double brent_guess(double a, double b, double guess, double fguess, const std::function<double (double)>& f, double tol, unsigned int &ic) {
+    unsigned ITMAX = 100;
+    double CGOLD = .3819660, ZEPS = 1e-10;
+    double d, e, etemp, fu, fv, fw, fx, p, q, r, tol1, tol2, u, v, w, x, xm;
+    double tolc = std::max(tol, std::sqrt(std::numeric_limits<double>::epsilon()));
+    v = guess;
     w = v;
     x = v;
-    e = 0.0;
-
-    status = 1;
-    arg = x;
-
-    return arg;
-  }
-//
-//  STATUS (INPUT) = 1, return with initial function value of FX.
-//
-  else if ( status == 1 )
-  {
-    fx = value;
+    e = 0.;
+    fx = fguess;
     fv = fx;
     fw = fx;
-  }
-//
-//  STATUS (INPUT) = 2 or more, update the data.
-//
-  else if ( 2 <= status )
-  {
-    fu = value;
+    for (ic = 0; ic < ITMAX; ++ic) {
+        xm = .5 * (a + b);
+        tol1 = tolc * std::abs(x) + ZEPS;
+        tol2 = 2. * tol1;
+        if (std::abs(x - xm) <= tol2 - .5 * (b - a))
+            break;
+        if (std::abs(e) > tol1) {
+            r = (x - w) * (fx - fv);
+            q = (x - v) * (fx - fw);
+            p = (x - v) * q - (x - w) * r;
+            q = 2. * (q - r);
+            if (q > 0.)
+                p = -p;
+            q = std::abs(q);
+            etemp = e;
+            e = d;
+            if (std::abs(p) >= std::abs(.5 * q * etemp) || p <= q * (a - x) || p >= q * (b - x))
+                goto brent1;
+            d = p / q;
+            u = x + d;
+            if (u - a < tol2 || b - u < tol2)
+                d = xm - x > 0. ? tol1 : -tol1;
+            goto brent2;
+        }
+        brent1:
+        if (x >= xm)
+            e = a - x;
+        else
+            e = b - x;
+        d = CGOLD * e;
+        brent2:
+        if (std::abs(d) >= tol1)
+            u = x + d;
+        else
+            u = x + (d > 0 ? tol1 : -tol1);
+        fu = f(u);
+        if (fu <= fx) {
+            if (u >= x)
+                a = x;
+            else
+                b = x;
+            v = w;
+            fv = fw;
+            w = x;
+            fw = fx;
+            x = u;
+            fx = fu;
+        } else {
+            if (u < x)
+                a = u;
+            else
+                b = u;
+            if (fu <= fw || w == x) {
+                v = w;
+                fv = fw;
+                w = u;
+                fw = fu;
+            } else if (fu <= fv || v == x || v == w) {
+                v = u;
+                fv = fu;
+            }
+        }
+    }
+#ifdef CMDL
+    if (ic == ITMAX)
+        std::cerr << "Warning: the maximum number of iterations in Brent's method was exceeded" << std::endl;
+#endif
+    return x;
+}
 
-    if ( fu <= fx )
-    {
-      if ( x <= u )
-      {
-        a = x;
-      }
-      else
-      {
-        b = x;
-      }
-      v = w;
-      fv = fw;
-      w = x;
-      fw = fx;
-      x = u;
-      fx = fu;
+double dbrent_guess(double a, double b, double guess, const std::function<Eigen::Vector2d(double)>& f_df, double tol, unsigned int &ic) {
+    unsigned ITMAX = 100;
+    double ZEPS = 1e-10;
+    double d, d1, d2, du, dv, dw, dx, e, fu, fv, fw, fx, olde, tol1, tol2, u, u1, u2, v, w, x, xm;
+    double tolc = std::max(tol, std::sqrt(std::numeric_limits<double>::epsilon()));
+    bool ok1, ok2;
+    v = guess;
+    w = v;
+    x = v;
+    e = 0.;
+    auto res = f_df(x);
+    fx = res(0);
+    fv = fx;
+    fw = fx;
+    dx = res(1);
+    dv = dx;
+    dw = dx;
+    for (ic = 1; ic < ITMAX; ++ic) {
+        xm = .5 * (a + b);
+        tol1 = tolc * std::abs(x) + ZEPS;
+        tol2 = 2. * tol1;
+        if (std::abs(x - xm) <= tol2 - .5 * (b - a))
+            break;
+        if (std::abs(e) > tol1) {
+            d1 = 2. * (b - a);
+            d2 = d1;
+            if(dw != dx)
+                d1 = (w - x) * dx / (dx - dw);
+            if(dv != dx)
+                d2 = (v - x) * dx / (dx - dv);
+            u1 = x + d1;
+            u2 = x + d2;
+            ok1 = ((a - u1) * (u1 - b) > 0.) && (dx * d1 <= 0.);
+            ok2 = ((a - u2) * (u2 - b) > 0.) && (dx * d2 <= 0.);
+            olde = e;
+            e = d;
+            if (!ok1 && !ok2)
+                goto dbrent1;
+            else if (ok1 && ok2) {
+                if (std::abs(d1) < std::abs(d2))
+                    d = d1;
+                else
+                    d = d2;
+            } else if (ok1)
+                d = d1;
+            else d = d2;
+            if (std::abs(d) > std::abs(0.5 * olde))
+                goto dbrent1;
+            u = x + d;
+            if (u - a < tol2 || b - u < tol2)
+                d = xm - x < 0 ? -tol1 : tol1;
+            goto dbrent2;
+        }
+        dbrent1:
+        if (dx >= 0.)
+            e = a - x;
+        else
+            e = b - x;
+        d = 0.5 * e;
+        dbrent2:
+        if (std::abs(d) >= tol1)
+            u = x + d;
+        else
+            u = x + (d < 0 ? -tol1 : tol1);
+        res = f_df(u);
+        fu = res(0);
+        if (std::abs(d) < tol1 && fu > fx) {
+            ++ic;
+            break;
+        }
+        du = res(1);
+        if (fu <= fx) {
+            if (u >= x)
+                a = x;
+            else
+                b = x;
+            v = w;
+            fv = fw;
+            dv = dw;
+            w = x;
+            fw = fx;
+            dw = dx;
+            x = u;
+            fx = fu;
+            dx = du;
+        } else {
+            if (u < x)
+                a = u;
+            else
+                b = u;
+            if (fu <= fw || w == x) {
+                v = w;
+                fv = fw;
+                dv = dw;
+                w = u;
+                fw = fu;
+                dw = du;
+            } else if (fu <= fv || v == x || v == w) {
+                v = u;
+                fv = fu;
+                dv = du;
+            }
+        }
     }
-    else
-    {
-      if ( u < x )
-      {
-        a = u;
-      }
-      else
-      {
-        b = u;
-      }
+#ifdef CMDL
+    if (ic == ITMAX)
+        std::cerr << "Warning: the maximum number of iterations in Brent's method was exceeded" << std::endl;
+#endif
+    return x;
+}
 
-      if ( fu <= fw || w == x )
-      {
-        v = w;
-        fv = fw;
-        w = u;
-        fw = fu;
-      }
-      else if ( fu <= fv || v == x || v == w )
-      {
-        v = u;
-        fv = fu;
-      }
+double brent_gsl(double a, double b, double guess, std::function<double(double)>& f, double tol, unsigned int& ic,
+                 std::function<void(double)> *rp, std::function<void(double,double)> *rv) {
+    gsl_function F = {
+        [](double d, void* vf) -> double {
+            auto& f = *static_cast<std::function<double(double)>*>(vf);
+            return f(d);
+        },
+        &f
+    };
+    const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
+    gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
+    gsl_min_fminimizer_set(s, &F, guess, a, b);
+    ic = 0;
+    int status;
+    unsigned max_iter = 100;
+    double m, p, t1, t2 = std::abs(a - b) / std::min(a, b), t0 = t2, prog, em1 = std::exp(1.) - 1.;
+    do {
+        ic++;
+        status = gsl_min_fminimizer_iterate(s);
+        if (status == GSL_EINVAL) {
+            m = std::numeric_limits<double>::quiet_NaN();
+            break;
+        }
+        t1 = t2;
+        m = gsl_min_fminimizer_x_minimum(s);
+        p = gsl_min_fminimizer_f_minimum(s);
+        if (rv != NULL)
+            rv->operator()(m, p);
+        a = gsl_min_fminimizer_x_lower(s);
+        b = gsl_min_fminimizer_x_upper(s);
+        status = gsl_min_test_interval(a, b, 0., tol);
+        if (rp != NULL && status == GSL_CONTINUE) {
+            t2 = std::abs(a - b) / std::min(a, b);
+            prog = std::log((t0 - tol + em1 * (t0 - t2)) / (t0 - tol + em1 * (t0 - t1)));
+            rp->operator()(prog);
+        }
+    } while (status == GSL_CONTINUE && ic < max_iter);
+#ifdef CMDL
+    if (ic == max_iter)
+        std::cerr << "Warning: the maximum number of iterations in Brent's method was exceeded" << std::endl;
+#endif
+    gsl_min_fminimizer_free(s);
+    if (rp != NULL) {
+        prog = std::log((t0 - tol) * std::exp(1.) / (t0 - tol + em1 * (t0 - t2)));
+        rp->operator()(prog);
     }
-  }
-//
-//  Take the next step.
-//
-  midpoint = 0.5 * ( a + b );
-  tol1 = eps * fabs ( x ) + tol / 3.0;
-  tol2 = 2.0 * tol1;
-//
-//  If the stopping criterion is satisfied, we can exit.
-//
-  if ( fabs ( x - midpoint ) <= ( tol2 - 0.5 * ( b - a ) ) )
-  {
-    status = 0;
-    return arg;
-  }
-//
-//  Is golden-section necessary?
-//
-  if ( fabs ( e ) <= tol1 )
-  {
-    if ( midpoint <= x )
-    {
-      e = a - x;
-    }
-    else
-    {
-      e = b - x;
-    }
-    d = c * e;
-  }
-//
-//  Consider fitting a parabola.
-//
-  else
-  {
-    r = ( x - w ) * ( fx - fv );
-    q = ( x - v ) * ( fx - fw );
-    p = ( x - v ) * q - ( x - w ) * r;
-    q = 2.0 * ( q - r );
-    if ( 0.0 < q )
-    {
-      p = - p;
-    }
-    q = fabs ( q );
-    r = e;
-    e = d;
-//
-//  Choose a golden-section step if the parabola is not advised.
-//
-    if (
-      ( fabs ( 0.5 * q * r ) <= fabs ( p ) ) ||
-      ( p <= q * ( a - x ) ) ||
-      ( q * ( b - x ) <= p ) )
-    {
-      if ( midpoint <= x )
-      {
-        e = a - x;
-      }
-      else
-      {
-        e = b - x;
-      }
-      d = c * e;
-    }
-//
-//  Choose a parabolic interpolation step.
-//
-    else
-    {
-      d = p / q;
-      u = x + d;
+    return m;
+}
 
-      if ( ( u - a ) < tol2 )
-      {
-        d = tol1 * sign ( midpoint - x );
-      }
+double brent_gsl_with_values(double a, double fa, double b, double fb, double guess, double fguess,
+                             std::function<double (double)>& f, double tol, unsigned int& ic) {
+    gsl_function F = {
+        [](double d, void* vf) -> double {
+            auto& f = *static_cast<std::function<double(double)>*>(vf);
+            return f(d);
+        },
+        &f
+    };
+    const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
+    gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
+    gsl_min_fminimizer_set_with_values(s, &F, guess, fguess, a, fa, b, fb);
+    ic = 0;
+    int status;
+    unsigned max_iter = 100;
+    double m;
+    do {
+        ic++;
+        status = gsl_min_fminimizer_iterate(s);
+        if (status == GSL_EINVAL) {
+            m = std::numeric_limits<double>::quiet_NaN();
+            break;
+        }
+        m = gsl_min_fminimizer_x_minimum(s);
+        a = gsl_min_fminimizer_x_lower(s);
+        b = gsl_min_fminimizer_x_upper(s);
+        status = gsl_min_test_interval(a, b, 0., tol);
+    } while (status == GSL_CONTINUE && ic < max_iter);
+#ifdef CMDL
+    if (ic == max_iter)
+        std::cerr << "Warning: the maximum number of iterations in Brent's method was exceeded" << std::endl;
+#endif
+    gsl_min_fminimizer_free(s);
+    return m;
+}
 
-      if ( ( b - u ) < tol2 )
-      {
-        d = tol1 * sign ( midpoint - x );
-      }
+/**
+ * Find a + b*x + c*x^2/2 which passes through points (xk,fxk).
+ */
+void fit_quadratic(double x1, double fx1, double x2, double fx2, double x3, double fx3, double &b, double &c) {
+    b = ((fx3 - fx1) * x2 * x2 + (fx1 - fx2) * x3 * x3 + (fx2 - fx3) * x1 * x1) / ((x3 - x1) * (x2 - x3) * (x2 - x1));
+    c = 2. * (fx1 * (x2 - x3) + fx3 * (x1 - x2) + fx2 * (x3 - x1))/((x3 - x1) * (x2 - x3) * (x2 - x1));
+}
+
+/**
+ * Project x into [a,b], i.e. return the point in [a,b] nearest to x.
+ */
+double project_point(double x, double a, double b) {
+    if (x >= a && x <= b)
+        return x;
+    if (x < a)
+        return a;
+    return b;
+}
+
+double mifflin_five_point(double a, double fa, double b, double fb, double guess, double fguess,
+                          std::function<double(double)> &f, double tol, unsigned int &ic) {
+    std::pair<double, double> ps[5];
+    auto NaN = std::numeric_limits<double>::quiet_NaN();
+    double x, fx, xl, fxl, xr, fxr, xo, fxo, xlp, fxlp, xrp, fxrp, bl, cl, br, cr, gl, gr, glp, grp;
+    double Ql, Qr, Rl, Rr, R, sigma, pl, pr, L, U, Po, bo, co;
+    // find safeguard parameter
+    double s = 1. / (4. * (b - a)), l2 = (b - a) * (b - a);
+    while (a + s * l2 >= guess || b - s * l2 <= guess) s *= 0.9;
+    // initialize five-point set
+    ps[0] = ps[4] = std::make_pair(NaN, NaN);
+    ps[1] = std::make_pair(a, fa);
+    ps[2] = std::make_pair(guess, fguess);
+    ps[3] = std::make_pair(b, fb);
+    // iterate
+    unsigned max_iter = 100;
+    for (ic = 0; ic < max_iter; ++ic) {
+        xlp = ps[0].first, fxlp = ps[0].second;
+        xl = ps[1].first, fxl = ps[1].second;
+        xo = ps[2].first, fxo = ps[2].second;
+        xr = ps[3].first, fxr = ps[3].second;
+        xrp = ps[4].first, fxrp = ps[4].second;
+        if (std::abs(xr - xl) / std::abs(xo) < tol)
+            break;
+        if (std::isfinite(xlp)) {
+            fit_quadratic(xlp, fxlp, xl, fxl, xo, fxo, bl, cl);
+            gl = bl + cl * xo;
+            Ql = cl * (xr - xo) > -gl ? xo - gl / cl : xr;
+            glp = (fxl - fxlp) / (xl - xlp);
+            pl = fxo - fxl - glp * (xo - xl);
+        } else {
+            gl = 0.;
+            glp = 0.;
+            Ql = xr;
+        }
+        if (std::isfinite(xrp)) {
+            fit_quadratic(xo, fxo, xr, fxr, xrp, fxrp, br, cr);
+            gr = br + cr * xo;
+            Qr = cr * (xo - xl) > gr ? xo - gr / cr : xl;
+            grp = (fxr - fxrp) / (xr - xrp);
+            pr = fxo - fxr - grp * (xo - xr);
+        } else {
+            gr = 0.;
+            grp = 0.;
+            Qr = xl;
+        }
+        Rl = Ql;
+        Rr = Qr;
+        if (Ql > xo && Qr >= xo && pr < (grp - gl) * (Ql - xo))
+            Rl = xo + pr / (grp - gl);
+        if (Ql <= xo && Qr < xo && pl < (gr - glp) * (xo - Qr))
+            Rr = xo - pl / (gr - glp);
+        L = std::min(Rl, Rr);
+        U = std::max(Rl, Rr);
+        fit_quadratic(xl, fxl, xo, fxo, xr, fxr, bo, co);
+        Po = grp > 0. && glp < 0. ? xo + (pr - pl) / (grp - glp) : -bo / co;
+        R = project_point(Po, L, U);
+        sigma = s * (xr - xl) * (xr - xl);
+        x = project_point(R, xl + sigma, xr - sigma);
+        if (std::abs(x - xo) < sigma)
+            x = xo <= (xr + xl) / 2. ? xo + sigma : xo - sigma;
+        fx = f(x);
+        if (x > xo && fx >= fxo) {
+            ps[4] = ps[3];
+            ps[3] = std::make_pair(x, fx);
+        } else if (x > xo && fx < fxo) {
+            ps[0] = ps[1];
+            ps[1] = ps[2];
+            ps[2] = std::make_pair(x, fx);
+        } else if (x < xo && fx >= fxo) {
+            ps[0] = ps[1];
+            ps[1] = std::make_pair(x, fx);
+        } else if (x < xo && fx < fxo) {
+            ps[4] = ps[3];
+            ps[3] = ps[2];
+            ps[2] = std::make_pair(x, fx);
+        } else assert(false);
     }
-  }
-//
-//  F must not be evaluated too close to X.
-//
-  if ( tol1 <= fabs ( d ) )
-  {
-    u = x + d;
-  }
-  if ( fabs ( d ) < tol1 )
-  {
-    u = x + tol1 * sign ( d );
-  }
-//
-//  Request value of F(U).
-//
-  arg = u;
-  status = status + 1;
-
-  return arg;
+#ifdef CMDL
+    if (ic == max_iter)
+        std::cerr << "Warning: the maximum number of iterations in Mifflin's method was exceeded" << std::endl;
+#endif
+    return xo;
 }

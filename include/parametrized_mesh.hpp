@@ -60,6 +60,14 @@ public:
   double getTotalLength() const;
 
   /**
+   * This function is used for getting the length of the
+   * largest panel in the mesh
+   *
+   * @return the length of the largest panel
+   */
+  double maxPanelLength() const;
+
+  /**
    * This function is used for getting the panel at point s in [0,1]
    *
    * @param s length

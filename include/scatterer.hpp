@@ -55,7 +55,7 @@ namespace scatterer {
     * @param y y-coordinates of vertices
     * @param N desired number of panels
     */
-    ParametrizedMesh panelize(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor);
+    ParametrizedMesh panelize(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor, bool print_info = true);
 
     /**
     * This function returns true if p is inside polygon

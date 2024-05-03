@@ -1,60 +1,78 @@
 #include <iostream>
 #include <chrono>
 #include <fstream>
+#include <mutex>
 #include "singular_values_arnoldi.hpp"
 #include "../arpackpp_lib/include/arrscomp.h"
 #include "arpp_eig_interface.hpp"
 #include "st_vec_storage.hpp"
+
+#define EIGEN_USE_BLAS
+#define EIGEN_USE_LAPACKE
 
 typedef std::complex<double> complex_t;
 
 int iter_counter_restart;
 int iter_counter_matvec;
 
+#define ARNOLDI_MAXITER 1000
+#define ARPACK_SILENT_MODE 1
+
 namespace arnoldi {
+
+    static std::mutex mtx;
 
     Eigen::VectorXd sv(const Eigen::MatrixXcd &T, unsigned count, double acc) {
         const unsigned N = T.cols();
         // precomputation for finding EVs with arpack++
         Eigen::PartialPivLU<Eigen::MatrixXcd> lu = T.partialPivLu();
+        auto lu_adjoint = lu.adjoint();
         std::string which = std::to_string(2*count) + "L";
-        ARrcCompStdEig<double> prob(2 * N, 2 * count, "LM", 0, acc, std::numeric_limits<int>::max(), NULL);
-
-        // iterate until entire space is searched
-        while (!prob.ArnoldiBasisFound()) {
-            // Calling ARPACK FORTRAN code. Almost all work needed to
-            // find an Arnoldi basis is performed by TakeStep.
-            prob.TakeStep();
-
-            if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
-                // Performing matrix-vector multiplication in Eigen.
-                // In regular mode, w = Av must be performed whenever
-                // GetIdo is equal to 1 or -1. GetVector supplies a pointer
-                // to the input vector, v, and PutVector a pointer to the
-                // output vector, w.
-
-                Eigen::VectorXcd PutVectorEig(2 * N);
-                Eigen::VectorXcd GetVectorEig(2 * N);
-
-                arpp_to_eig(prob.GetVector(), GetVectorEig);
-                PutVectorEig.segment(0, N) = lu.adjoint().solve(GetVectorEig.segment(N, N));
-                PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
-                eig_to_arpp(PutVectorEig, prob.PutVector());
-                iter_counter_matvec++;
-            }
-        }
-        // write results into our common data structure
-        prob.FindEigenvalues();
         Eigen::VectorXd res(count);
-        for (unsigned i = 0; i < count; i++) {
-            // DON'T USE abs, ONLY std::abs
-            // abs inconsistent across platforms, can cast to int
-            res[i] = std::abs(1. / prob.Eigenvalue(2 * count - 2 * i - 1).real());
+        std::unique_lock lck(mtx);
+        try {
+            ARrcCompStdEig<double> prob(2 * N, 2 * count, "LM", 0, acc, ARNOLDI_MAXITER, NULL);
+            // iterate until entire space is searched
+            while (!prob.ArnoldiBasisFound()) {
+                // Calling ARPACK FORTRAN code. Almost all work needed to
+                // find an Arnoldi basis is performed by TakeStep.
+                prob.TakeStep();
+
+                if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
+                    // Performing matrix-vector multiplication in Eigen.
+                    // In regular mode, w = Av must be performed whenever
+                    // GetIdo is equal to 1 or -1. GetVector supplies a pointer
+                    // to the input vector, v, and PutVector a pointer to the
+                    // output vector, w.
+
+                    Eigen::VectorXcd PutVectorEig(2 * N);
+                    Eigen::VectorXcd GetVectorEig(2 * N);
+
+                    arpp_to_eig(prob.GetVector(), GetVectorEig);
+                    PutVectorEig.segment(0, N) = lu_adjoint.solve(GetVectorEig.segment(N, N));
+                    PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
+                    eig_to_arpp(PutVectorEig, prob.PutVector());
+                    iter_counter_matvec++;
+                }
+            }
+            // write results into our common data structure
+            prob.FindEigenvalues();
+            for (unsigned i = 0; i < count; i++) {
+                // DON'T USE abs, ONLY std::abs
+                // abs inconsistent across platforms, can cast to int
+                res[i] = std::abs(1. / prob.Eigenvalue(2 * count - 2 * i - 1).real());
+            }
+            /*st_vec_storage.add_vec(k,start);
+            delete start;
+            st_vec_storage.status();*/
+            iter_counter_restart = prob.GetIter();
+        } catch (ArpackError err) {
+#ifdef CMDL
+            if (err.Status() == -107)
+                std::cout << "Arpack error: maximum number of iterations taken" << std::endl;
+            else std::cout << "Arpack error " << err.Status() << std::endl;
+#endif
         }
-        /*st_vec_storage.add_vec(k,start);
-        delete start;
-        st_vec_storage.status();*/
-        iter_counter_restart = prob.GetIter();
         return res;
     }
     // TODO: resort EVs & vectors after finding Eigenvectors

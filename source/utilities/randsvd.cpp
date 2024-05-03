@@ -10,12 +10,44 @@
  * (c) 2023 Luka Marohnić
  */
 
+//#define USE_LAPACK_ZGESVD 1
+
 #include "randsvd.hpp"
+#ifdef USE_LAPACK_ZGESVD
+#include <lapack.h>
+#include <complex.h>
+#else
 #include <complex>
+#endif
 #include <random>
 #include <iostream>
+#include <chrono>
+
+using namespace std::chrono;
 
 namespace randomized_svd {
+
+    static bool _benchmarking = false;
+    void benchmarking(bool yes) {
+        _benchmarking = yes;
+    }
+
+    static unsigned lu_time = 0, qr_time = 0, sub_iter_time = 0, svd_time = 0;
+    double get_lu_time() {
+        return double(lu_time) * 1e-3;
+    }
+    double get_qr_time() {
+        return double(qr_time) * 1e-3;
+    }
+    double get_sub_iter_time() {
+        return double(sub_iter_time) * 1e-3;
+    }
+    double get_svd_time() {
+        return double(svd_time) * 1e-3;
+    }
+    void reset_timer() {
+        lu_time = qr_time = sub_iter_time = svd_time = 0;
+    }
 
     Eigen::MatrixXcd randGaussian(int nr, int nc) {
         std::random_device rd {};
@@ -32,14 +64,49 @@ namespace randomized_svd {
         int nr = R.rows(), nc = R.cols();
         Eigen::MatrixXcd Q, thinQ;
         thinQ.setIdentity(nr, nc);
+        auto tic = high_resolution_clock::now();
         Eigen::PartialPivLU<Eigen::MatrixXcd> lu_decomp(T);
+        auto lu_adjoint = lu_decomp.adjoint();
+        auto toc = high_resolution_clock::now();
+        if (_benchmarking)
+            lu_time += duration_cast<milliseconds>(toc - tic).count();
+        tic = high_resolution_clock::now();
         Q = lu_decomp.solve(R).colPivHouseholderQr().matrixQ() * thinQ;
+        toc = high_resolution_clock::now();
+        if (_benchmarking)
+            qr_time += duration_cast<milliseconds>(toc - tic).count();
+        tic = high_resolution_clock::now();
         for (int i = 0; i < q; ++i) {
-            Q = lu_decomp.adjoint().solve(Q).householderQr().householderQ() * thinQ;
-            Q = lu_decomp.solve(Q).householderQr().householderQ() * thinQ;
+            Q = lu_decomp.solve(lu_adjoint.solve(Q).householderQr().householderQ() * thinQ).householderQr().householderQ() * thinQ;
         }
-        auto svd = lu_decomp.adjoint().solve(Q).bdcSvd();
-        return 1.0 / svd.singularValues()(0);
+        toc = high_resolution_clock::now();
+        if (_benchmarking)
+            sub_iter_time += duration_cast<milliseconds>(toc - tic).count();
+        tic = high_resolution_clock::now();
+        double res;
+#ifdef USE_LAPACK_ZGESVD
+        Q = lu_adjoint.solve(Q);
+        char none = 'N';
+        double *svd = new double[nr], *rwork = new double[5 * nr];
+        lapack_complex_double wkopt, *a, *work;
+        int lwork = -1, info, lda = nr, ldu = nr, ldvt = nc;
+        a = reinterpret_cast<lapack_complex_double*>(Q.data());
+        LAPACK_zgesvd(&none, &none, &nr, &nc, a, &lda, svd, NULL, &ldu, NULL, &ldvt, &wkopt, &lwork, rwork, &info);
+        lwork = (int)creal(wkopt);
+        work = new lapack_complex_double[lwork];
+        LAPACK_zgesvd(&none, &none, &nr, &nc, a, &lda, svd, NULL, &ldu, NULL, &ldvt, work, &lwork, rwork, &info);
+        res = 1.0 / svd[0];
+        delete[] svd;
+        delete[] rwork;
+        delete[] work;
+#else
+        auto svd = lu_adjoint.solve(Q).jacobiSvd();
+        res = 1.0 / svd.singularValues()(0);
+#endif
+        toc = high_resolution_clock::now();
+        if (_benchmarking)
+            svd_time += duration_cast<milliseconds>(toc - tic).count();
+        return res;
     }
 
     Eigen::Vector2d sv_der(const Eigen::MatrixXcd &T, const Eigen::MatrixXcd &T_der, const Eigen::MatrixXcd &R, int q) {

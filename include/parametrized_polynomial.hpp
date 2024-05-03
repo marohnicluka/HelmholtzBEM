@@ -44,9 +44,9 @@ public:
   Eigen::Vector2d operator()(double) const;
   Eigen::Vector2d operator[](double) const;
   Eigen::Vector2d swapped_op(double) const;
-  Eigen::ArrayXXcd operator()(const Eigen::ArrayXXd &) const;
-  Eigen::ArrayXXcd operator[](const Eigen::ArrayXXd &) const;
-  Eigen::ArrayXXcd swapped_op(const Eigen::ArrayXXd &) const;
+  Eigen::ArrayXXcd operator()(const Eigen::ArrayXXd &t) const;
+  Eigen::ArrayXXcd operator[](const Eigen::ArrayXXd &t) const;
+  Eigen::ArrayXXcd swapped_op(const Eigen::ArrayXXd &t) const;
 
   /**
    * See documentation in AbstractParametrizedCurve
@@ -54,9 +54,9 @@ public:
   Eigen::Vector2d Derivative(double) const;
   Eigen::Vector2d Derivative_01(double) const;
   Eigen::Vector2d Derivative_01_swapped(double) const;
-  void Derivative(const Eigen::ArrayXXd &, Eigen::ArrayXXcd &, Eigen::ArrayXXd &) const;
-  void Derivative_01(const Eigen::ArrayXXd &, Eigen::ArrayXXcd &, Eigen::ArrayXXd &) const;
-  void Derivative_01_swapped(const Eigen::ArrayXXd &, Eigen::ArrayXXcd &, Eigen::ArrayXXd &, bool) const;
+  void Derivative(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm) const;
+  void Derivative_01(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm) const;
+  void Derivative_01_swapped(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm, bool neg) const;
 
   /**
    * See documentation in AbstractParametrizedCurve

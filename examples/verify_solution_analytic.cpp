@@ -94,10 +94,6 @@ int main(int argc, char** argv) {
                 << "unset surface" << std::endl
                 << "set size square" << std::endl;
 
-    // enable parallelization
-    complex_bessel::parallelize(true);
-    parallelize_builder(true);
-
     // analytic solution data
     double *a_n = new double[2 * bessel_order + 1];
     for (unsigned i = 0; i < 2 * bessel_order + 1; ++i) {
@@ -116,7 +112,7 @@ int main(int argc, char** argv) {
 
     Eigen::ArrayXXd grid_X, grid_Y;
     Eigen::Vector2d lower_left_corner(-1., -1.), upper_right_corner(1., 1.);
-    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 11, order, k, c_o, c_i,
+    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
                                                                     lower_left_corner, upper_right_corner, grid_size, grid_size,
                                                                     grid_X, grid_Y, false);
 

@@ -36,7 +36,7 @@ typedef std::complex<double> complex_t;
 complex_t ii = complex_t(0,1.);
 
 // tolerance when verifying root
-double epsilon = 1e-3;
+double eps_mach = 1e-3;
 
 int main(int argc, char** argv) {
     // define radius of circle refraction indexces and initial wavenumber
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
 		#endif
         // if a minima has been found, take a large step to hop out of current basin
         k_temp = res(0);
-        if (abs(first_der) < epsilon){
+        if (abs(first_der) < eps_mach){
             k_temp+=2*step;
 			#ifdef CMDL
             std::cout << "A resonance has been found, jumping to find next." << std::endl;

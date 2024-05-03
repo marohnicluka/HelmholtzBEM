@@ -46,7 +46,7 @@ typedef std::complex<double> complex_t;
 complex_t ii = complex_t(0,1.);
 
 // tolerance when verifying/finding root
-double epsilon = 1e-3;//numeric_limits<double>::epsilon();
+double eps_mach = 1e-3;//numeric_limits<double>::epsilon();
 
 int main(int argc, char** argv) {
 
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
             // compute minima of smallest singular value
             bool root_found = false;
             unsigned num_iter;
-            double root = rtsafe(sv_eval_der, sv_eval_both,k_temp.real(), k_temp.real()+h_x,epsilon,root_found,num_iter);
+            double root = rtsafe(sv_eval_der, sv_eval_both,k_temp.real(), k_temp.real()+h_x,eps_mach,root_found,num_iter);
 			#ifdef CMDL
             std::cout << "#######################################################" << std::endl;
 			std::cout << std::endl;
@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
             // check that found root is not a crossing
             if (root_found) {
                 double val_at_root = sv_eval_der(root);
-                if (abs(val_at_root) > epsilon) {
+                if (abs(val_at_root) > eps_mach) {
                     file_out << NAN << " " << NAN << " " << NAN << std::endl;
                 } else {
                     file_out << root << " " << val_at_root << " " << num_iter << std::endl;

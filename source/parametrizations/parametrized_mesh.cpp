@@ -54,3 +54,13 @@ const AbstractParametrizedCurve & ParametrizedMesh::getPanel(double s, double &t
   t = (len - (i > 0 ? c_sums_[i - 1] : 0.)) / panel.length();
   return panel;
 }
+
+double ParametrizedMesh::maxPanelLength() const {
+  double ret = 0., L;
+  for (const auto &p : panels_) {
+    L = p->length();
+    if (L > ret)
+      ret = L;
+  }
+  return ret;
+}

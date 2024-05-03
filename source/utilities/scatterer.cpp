@@ -94,11 +94,11 @@ namespace scatterer {
         return (unsigned int)std::round(d / (min_s * f));
     }
 
-    ParametrizedMesh panelize(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor) {
+    ParametrizedMesh panelize(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor, bool print_info) {
         PanelVector res;
         unsigned n = x.size();
         int i, j;
-        double eps = numeric_limits<double>::epsilon(), eps2 = std::sqrt(eps);
+        double eps = numeric_limits<double>::epsilon(), eps2 = 1e-3;
         Eigen::Vector2d p0, p1, p2, p3;
         Eigen::VectorXd d, k, b;
         Eigen::MatrixXd E;
@@ -113,7 +113,7 @@ namespace scatterer {
             d(i) = (p2 - p1).norm();
     #ifdef CMDL
             if (d(i) < eps)
-                std::cout << "Warning: two nearly identical vertices detected! Distance: " << d(i) << std::endl;
+                std::cerr << "Warning: two nearly identical vertices detected! Distance: " << d(i) << std::endl;
     #endif
             if (i < n - 1)
                 E(i, i) = 1.0 / d(i);
@@ -200,10 +200,10 @@ namespace scatterer {
                     pos += d;
                 }
                 if ((pos - p2).norm() / D.norm() > eps2) {
-    #ifdef CMDL
+#ifdef CMDL
                     std::cerr << "Warning: panel subdivision failed, using uniform subdivision instead (rel. error: "
-                            << (pos - p2).norm() / p2.norm() << ")" << std::endl;
-    #endif
+                              << (pos - p2).norm() / D.norm() << ")" << std::endl;
+#endif
                     for (j = 0; j < n_i; ++j) res.pop_back();
                     pos = p1;
                     for (j = 0; j < n_i; ++j) {
@@ -213,25 +213,27 @@ namespace scatterer {
                 }
             }
         }
-    #ifdef CMDL
-        std::cout << "Working with " << M << " panels" << std::endl;
-        double min_length = res[0]->length(), max_length = min_length, avg_length = 0., s = 0.;
-        for (i = 0; i < M; ++i) {
-            double len = res[i]->length();
-            if (len < min_length)
-                min_length = len;
-            if (len > max_length)
-                max_length = len;
-            avg_length += len;
+        if (print_info) {
+#ifdef CMDL
+            std::cout << "Working with " << M << " panels" << std::endl;
+            double min_length = res[0]->length(), max_length = min_length, avg_length = 0., s = 0.;
+            for (i = 0; i < M; ++i) {
+                double len = res[i]->length();
+                if (len < min_length)
+                    min_length = len;
+                if (len > max_length)
+                    max_length = len;
+                avg_length += len;
+            }
+            avg_length /= double(M);
+            for (i = 0; i < M; ++i) {
+                s += std::pow(avg_length - res[i]->length(), 2);
+            }
+            s = std::sqrt(s);
+            std::cout << "Panel length (min, max, mean, variability): "
+                      << min_length << ", " << max_length << ", " << avg_length << ", " << s / avg_length << " %" << std::endl;
+#endif
         }
-        avg_length /= double(M);
-        for (i = 0; i < M; ++i) {
-            s += std::pow(avg_length - res[i]->length(), 2);
-        }
-        s = std::sqrt(s);
-        std::cout << "Panel length (min, max, mean, variability): "
-                << min_length << ", " << max_length << ", " << avg_length << ", " << s / avg_length << " %" << std::endl;
-    #endif
         return ParametrizedMesh(res);
     }
 

@@ -16,6 +16,7 @@
 #include <execution>
 #include <algorithm>
 #include <string>
+#include <thread>
 #include "parametrized_line.hpp"
 #include "singular_values_arnoldi.hpp"
 #include "find_roots.hpp"
@@ -24,15 +25,12 @@
 #include "find_roots.hpp"
 #include "continuous_space.hpp"
 
-//#define BRENT_REFINE
-
 // define shorthand for time benchmarking tools, complex data type and immaginary unit
 using namespace std::chrono;
-typedef std::complex<double> complex_t;
-complex_t ii = complex_t(0, 1.);
 
-// tolerance when finding root
-double epsilon_fin = 1e-12;
+#define COMPUTE_ARNOLDI 1
+#define COMPUTE_RSVD 1
+//#define WITH_MULTIPLE_THREADS 1
 
 int main(int argc, char** argv) {
 
@@ -97,80 +95,97 @@ int main(int argc, char** argv) {
     file_out.open(mfile, std::ofstream::out | std::ofstream::trunc);
     file_out.close();
 
-    int nc = 4;
+    int nc = 2;
     int nr = 2 * numpanels;
     Eigen::MatrixXcd W = randomized_svd::randGaussian(nr, nc);
 
-    double k_max = k_min + 5., k_step = (k_max - k_min) / (n_points_k - 1.);
+    double k_max = k_min + 1., k_step = (k_max - k_min) / (n_points_k - 1.);
 
     std::vector<size_t> ind(n_points_k);
-    std::vector<double> rsv(n_points_k), asv(n_points_k), rsv_min, asv_min, bracket_left, bracket_right;
+    std::vector<double> rsv(n_points_k), asv(n_points_k);
     std::vector<double>::const_iterator it;
 
     // create objects for assembling solutions operator and its derivatives
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
     SolutionsOperator so(builder_data);
-    GalerkinMatrixBuilder builder(builder_data);
 
     std::iota(ind.begin(), ind.end(), 0);
 
-    Eigen::MatrixXcd Tall(nr, nr * n_points_k);
-    auto rsvd_sv = [&](double k) {
-        Eigen::MatrixXcd T;
-        so.gen_sol_op(k, c_o, c_i, T);
-        return randomized_svd::sv(T, W, q);
-    };
-    auto rsvd_sv_der = [&](double k) {
-        Eigen::MatrixXcd T, T_der;
-        so.gen_sol_op_1st_der(k, c_o, c_i, T, T_der);
-        return randomized_svd::sv_der(T, T_der, W, q)(1);
-    };
-    auto rsvd_sv_both = [&](double k) {
-        Eigen::MatrixXcd T, T_der, T_der2;
-        so.gen_sol_op_2nd_der(k, c_o, c_i, T, T_der, T_der2);
-        Eigen::MatrixXd res(1, 2);
-        auto v = randomized_svd::sv_der2(T, T_der, T_der2, W, q);
-        res(0, 0) = v(1);
-        res(0, 1) = v(2);
-        return res;
-    };
+    unsigned assembly_time = 0, rsv_time = 0, asv_time = 0;
 
+#ifdef WITH_MULTIPLE_THREADS
+    auto policy = std::execution::par;
+    unsigned n_threads = std::thread::hardware_concurrency();
 #ifdef CMDL
-    std::cout << "Computing rSVD and Arnoldi curves for c_i = " << c_i << "..." << std::endl;
+    std::cout << "Working with " << n_threads << " threads concurrently" << std::endl;
 #endif
-    auto tic = high_resolution_clock::now();
-    std::for_each(std::execution::par, ind.cbegin(), ind.cend(), [&](size_t i) {
-        Eigen::MatrixXcd T_in;
-        so.gen_sol_op(k_min + k_step * i, c_o, c_i, T_in);
-        Tall.block(0, i * nr, nr, nr) = T_in;
-    });
-    auto toc = high_resolution_clock::now();
-    auto dur_assembly = duration_cast<milliseconds>(toc - tic);
-    std::cout << "Assembly: " << 1e-3 * dur_assembly.count() << " sec" << std::endl;
-#if 0
-    std::cout << "Hankel time: " << builder.getHankelTime() << ", ratio: "
-              << (100 * builder.getHankelTime()) / dur_assembly.count() << "%" << std::endl;
-    std::cout << "Interaction matrix assembly time: " << (100 * builder.getInteractionMatrixTime()) / dur_assembly.count() << "%" << std::endl;
-    std::cout << "Mapping time: " << (100 * builder.getMappingTime()) / dur_assembly.count() << "%" << std::endl;
+#else
+    auto policy = std::execution::seq;
+    unsigned n_threads = 1;
+    GalerkinBuilder builder(builder_data);
 #endif
-    tic = high_resolution_clock::now();
-    for (size_t i = 0; i < n_points_k; ++i) {
-        const Eigen::MatrixXcd &T = Tall.block(0, i * nr, nr, nr);
-        asv[i] = arnoldi::sv(T, 1, acc)(0);
+    unsigned n_batches = n_points_k / n_threads;
+
+    auto tic_all = high_resolution_clock::now();
+    for (unsigned ib = 0; ib < n_batches; ++ib) {
+        unsigned bstart = ib * n_threads, bsize = ib < n_batches - 1 ? n_threads : n_points_k - bstart;
+        auto start = ind.cbegin() + bstart;
+        auto end = ib < n_batches - 1 ? ind.cbegin() + (ib + 1) * n_threads : ind.cend();
+        Eigen::MatrixXcd Tall(nr, nr * bsize);
+#ifdef CMDL
+        std::cout << std::endl << "Processing batch " << ib + 1 << " of " << n_batches << "..." << std::endl;
+#endif
+        auto tic = high_resolution_clock::now();
+        std::for_each(policy, start, end, [&](size_t i) {
+            Eigen::MatrixXcd T_in;
+#ifdef WITH_MULTIPLE_THREADS
+            so.gen_sol_op(k_min + k_step * i, c_o, c_i, T_in);
+#else
+            so.gen_sol_op(builder, k_min + k_step * i, c_o, c_i, T_in);
+#endif
+            Tall.block(0, (i - bstart) * nr, nr, nr) = T_in;
+        });
+        auto toc = high_resolution_clock::now();
+        auto dur_assembly = duration_cast<milliseconds>(toc - tic);
+        assembly_time += dur_assembly.count();
+        tic = high_resolution_clock::now();
+#ifdef COMPUTE_ARNOLDI
+        std::for_each(start, end, [&](size_t i) {
+            const Eigen::MatrixXcd &T = Tall.block(0, (i - bstart) * nr, nr, nr);
+            asv[i] = arnoldi::sv(T, 1, acc)(0);
+        });
+#endif
+        toc = high_resolution_clock::now();
+        auto dur_asv = duration_cast<milliseconds>(toc - tic);
+        asv_time += dur_asv.count();
+        tic = high_resolution_clock::now();
+#ifdef COMPUTE_RSVD
+        std::for_each(policy, start, end, [&](size_t i) {
+            const Eigen::MatrixXcd &T = Tall.block(0, (i - bstart) * nr, nr, nr);
+            rsv[i] = randomized_svd::sv(T, W, q);
+        });
+#endif
+        toc = high_resolution_clock::now();
+        auto dur_rsv = duration_cast<milliseconds>(toc - tic);
+        rsv_time += dur_rsv.count();
+#ifdef CMDL
+        std::cout << "Elapsed time (assembly, Arnoldi, RSVD) [sec]:\t"
+                  << 1e-3 * dur_assembly.count() << '\t'
+                  << 1e-3 * dur_asv.count() << '\t'
+                  << 1e-3 * dur_rsv.count() << std::endl;
+#endif
     }
-    toc = high_resolution_clock::now();
-    auto dur_asv = duration_cast<milliseconds>(toc - tic);
-    tic = high_resolution_clock::now();
-    std::for_each(std::execution::seq, ind.cbegin(), ind.cend(), [&](size_t i) {
-        const Eigen::MatrixXcd &T = Tall.block(0, i * nr, nr, nr);
-        rsv[i] = randomized_svd::sv(T, W, q);
-    });
-    toc = high_resolution_clock::now();
-    auto dur_rsv = duration_cast<milliseconds>(toc - tic);
-    std::cout << "Arnoldi: " << 1e-3 * dur_asv.count() << " sec" << std::endl;
-    std::cout << "RSVD: " << 1e-3 * dur_rsv.count() << " sec" << std::endl;
-    std::cout << "Ratio (Arnoldi / RSVD): " << double(dur_asv.count()) / double(dur_rsv.count()) << std::endl;
+    auto toc_all = high_resolution_clock::now();
+    auto dur_all = duration_cast<milliseconds>(toc_all - tic_all);
+#ifdef CMDL
+    std::cout << std::endl << "*Finished*"
+              << std::endl << "Total time: " << 1e-3 * dur_all.count() << " sec" << std::endl
+              << "Assembly time: " << (100 * assembly_time) / dur_all.count() << "%" << std::endl
+              << "Arnoldi time: " << 1e-3 * asv_time << " sec" << std::endl
+              << "RSVD time: " << 1e-3 * rsv_time << " sec" << std::endl
+              << "Arnoldi time / RSVD time: " << double(asv_time) / double(rsv_time) << std::endl;
+#endif
     std::vector<double> err(n_points_k);
     for (size_t i = 0; i < n_points_k; ++i) {
         err[i] = std::abs(asv[i] - rsv[i]) / std::abs(asv[i]);
@@ -179,6 +194,15 @@ int main(int argc, char** argv) {
     std::sort(err_sorted.begin(), err_sorted.end());
     std::cout << "Error: min " << err_sorted[0] << ", max " << err_sorted[n_points_k - 1]
               << ", median " << err_sorted[n_points_k / 2] << std::endl;
+#ifndef WITH_MULTIPLE_THREADS
+    std::cout << std::endl;
+    std::cout << "LU decomposition time: " << randomized_svd::get_lu_time() << std::endl
+              << "QR decomposition time: " << randomized_svd::get_qr_time() << std::endl
+              << "Subspace iterations time: " << randomized_svd::get_sub_iter_time() << std::endl
+              << "SVD time: " << randomized_svd::get_svd_time() << std::endl
+              << "Interaction matrix assembly time: " << builder.getInteractionMatrixAssemblyTime() * 1e-6 << std::endl
+              << "Hankel computation time: " << builder.getHankelComputationTime() * 1e-6 << std::endl;
+#endif
 
     file_out.open(mfile, std::ios_base::app);
     file_out << std::setprecision(18);
@@ -194,13 +218,17 @@ int main(int argc, char** argv) {
             file_out << ",";
         file_out << *it;
     }
-    file_out << "];" << std::endl << "asv = [";
+    file_out << "];" << std::endl;
+#ifdef COMPUTE_ARNOLDI
+    file_out << "asv = [";
     for (it = asv.begin(); it != asv.end(); ++it) {
         if (it != asv.begin())
             file_out << ",";
         file_out << *it;
     }
-    file_out << "];" << std::endl << "err = [";
+    file_out << "];" << std::endl;
+#endif
+    file_out << "err = [";
     for (it = err.begin(); it != err.end(); ++it) {
         if (it != err.begin())
             file_out << ",";

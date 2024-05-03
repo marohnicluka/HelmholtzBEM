@@ -46,6 +46,7 @@ For <tt>arch</tt> based distros:
 ~~~
 sudo pacman -S arpack
 sudo pacman -S lapack
+sudo pacman -S lapacke
 sudo pacman -S gsl
 sudo pacman -S tbb2020
 ~~~
@@ -54,6 +55,7 @@ For <tt>debian</tt> based distros:
 sudo apt install libboost-all-dev
 sudo apt install libarpack2-dev 
 sudo apt install liblapack3-dev
+sudo apt install liblapacke-dev
 sudo apt install libgsl-dev
 sudo apt install libtbb-dev
 ~~~
@@ -92,7 +94,7 @@ to update the system. You may be asked to relaunch the <tt>MINGW64</tt> terminal
 #### Installing necessary packages
 To install dependencies, copy the following command to the <tt>MINGW64</tt> terminal:
 ~~~
-pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-gsl mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
+pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-lapacke mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-gsl mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
 ~~~
 Next, add a symbolic link to the <tt>tbb</tt> shared library by issuing the command
 ~~~
@@ -729,7 +731,8 @@ This target builds a script that solves the Helmholtz transmission problem and o
 ~~~
 /path/to/library/bin/plot_solution_polygon
     <scatterer file> <incoming wave file>
-    <refraction inside> <refraction outside> <wavenumber>
+    <refraction inside> <refraction outside>
+    <min wavenumber> <max wavenumber>
     <#panels> <quadrature order> <grid size>
     <lower left x> <lower left y> <upper right x> <upper right x> 
     <mode> <intensity>
@@ -738,7 +741,7 @@ This target builds a script that solves the Helmholtz transmission problem and o
 * <tt>#panels</tt> is the desired number of panels or a fraction of the shortest side of the scatterer specifying the base panel length. Panels are generated automatically in a way that the panel length variance is minimal and the actual number of panels is close to the desired number.
 * <tt>quadrature order</tt> refers to computing the Green indentity integrals when lifting the solution from traces.
 * <tt>grid size</tt> is the number of points sampled at each side of the rectangular drawing area, which is specified by its lower left and upper right corners (the next four input arguments).
-* <tt>mode</tt> is an integer from 0 to 5, where 0/3, 1/4 and 2/5 specify the default drawing mode (still images), animation mode and amplitude plotting mode, respectively. The incoming wave is added to the scattered wave if <tt>mode</tt> is greater than 2.
+* <tt>mode</tt> is an integer from 0 to 5, where 0 (3), 1 (4) and 2 (5) specify the default drawing mode (still images), animation mode and amplitude plotting mode, respectively. The incoming wave is added to the scattered wave if <tt>mode</tt> is greater than 2.
 * <tt>intensity</tt> is a positive real number which controls color intensity of the plot (1.0 is the default intensity).
 
 If <tt>mode</tt> = 1 or 4, then the gnuplot script produces several images in the <tt>data/img</tt> directory. The following commandline produces an animation out of these frames (note that it should be run from the <tt>data</tt> directory):
@@ -749,7 +752,7 @@ convert -delay 4 -loop 0 img/file_plot_solution_square_XXXX_*.png
 The user will be updated through the command line about the progress of the algorithm if <tt>-DCMDL</tt> is set.
 
 ## Acknowledgements
-This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ). <img align='top' src='figures/hrzz-logo.png' width='100'>
+This software is a part of the project [Randomized low rank algorithms and applications to parameter dependent problems](https://www.croris.hr/projekti/projekt/4409) supported by the [Croatian Science Foundation](https://hrzz.hr/en/) (HRZZ). <img align='top' src='figures/HRZZ-eng.jpg' width='100'>
 
 The development was supervised by Luka Grubišić.
 

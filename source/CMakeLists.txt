@@ -27,13 +27,11 @@ target_link_libraries(hypersingular_der parametrizations)
 add_library(hypersingular_der2 STATIC hypersingular_der2.cpp)
 target_link_libraries(hypersingular_der2 parametrizations)
 
-add_library(galerkin_matrix_builder STATIC galerkin_matrix_builder.cpp)
-target_link_libraries(galerkin_matrix_builder parametrizations tbb)
-
+add_library(galerkin_builder STATIC galerkin_builder.cpp)
+target_link_libraries(galerkin_builder complex_bessel parametrizations)
 add_library(mass_matrix STATIC mass_matrix.cpp)
 target_link_libraries(mass_matrix parametrizations tbb)
-
-add_library(sol_op STATIC mass_matrix galerkin_matrix_builder)
+add_library(sol_op STATIC mass_matrix galerkin_builder)
 target_link_libraries(sol_op complex_bessel tbb)
 # add_library(sol_op_der STATIC single_layer_der double_layer_der hypersingular_der)
 # target_link_libraries(sol_op_der complex_bessel tbb)
