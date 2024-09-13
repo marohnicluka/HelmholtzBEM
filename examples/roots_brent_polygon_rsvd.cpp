@@ -9,7 +9,7 @@
  * The script can be run as follows:
  *
  * <tt>
- *  /path/to/roots_newton_square_rsvd \<scatterer filename\> \<refraction inside\>
+ *  /path/to/roots_brent_polygon_rsvd \<scatterer filename\> \<refraction inside\>
  *     \<refraction outside\> \<min wavenumber\> \<max wavenumber\>
  *     \<\#grid points for root search\> \<\#panels\> \<quadrature order\>
  *     \<accuracy\> \<#subspace iterations\>.
@@ -26,8 +26,6 @@
  * (c) 2023 Luka Marohnić
  */
 
-//#define COMPUTE_DERIVATIVES_AT_MINIMA
-
 #include <complex>
 #include <iostream>
 #include <fstream>
@@ -35,6 +33,7 @@
 #include <execution>
 #include <algorithm>
 #include <string>
+#include <random>
 #include <boost/math/interpolators/barycentric_rational.hpp>
 #include <gsl/gsl_errno.h>
 #include "parametrized_line.hpp"
@@ -48,6 +47,7 @@
 
 #define DEGREES_OF_FREEDOM 10
 //#define WITH_ARNOLDI 1
+//#define COMPUTE_DERIVATIVES_AT_MINIMA 1
 
 // define shorthand for time benchmarking tools, complex data type and immaginary unit
 using namespace std::chrono;
@@ -178,24 +178,29 @@ int main(int argc, char** argv) {
     // For each value k, approximate the smallest singular value by using rSVD.
     std::mutex mtx;
     unsigned done = 0;
-    std::transform(policy, ind.cbegin(), ind.cend(), rsv.begin(), [&](size_t i) {
+    std::function<double(double)> sf = [&](double k) {
         Eigen::MatrixXcd T;
-        kvals[i] = k_min + k_step * i;
 #ifdef DEGREES_OF_FREEDOM
-        so_test.gen_sol_op(kvals[i], c_o, c_i, T);
+        so_test.gen_sol_op(k, c_o, c_i, T);
 #ifdef WITH_ARNOLDI
         double res = arnoldi::sv(T, 1, 1e-8)(0);
 #else
         double res = randomized_svd::sv(T, W_test, q);
 #endif
 #else
-        so.gen_sol_op(kvals[i], c_o, c_i, T);
+        so.gen_sol_op(k, c_o, c_i, T);
 #ifdef WITH_ARNOLDI
         double res = arnoldi::sv(T, 1, 1e-8)(0);
 #else
         double res = randomized_svd::sv(T, W, q);
 #endif
 #endif
+        return res;
+    };
+    std::transform(policy, ind.cbegin(), ind.cend(), rsv.begin(), [&](size_t i) {
+        Eigen::MatrixXcd T;
+        kvals[i] = k_min + k_step * i;
+        double res = sf(kvals[i]);
         std::unique_lock lck(mtx);
         ++done;
 #ifdef CMDL

@@ -87,6 +87,11 @@ public:
    */
   unsigned getSplit() const { return split_; }
 
+  /**
+   * This function returns true iff the mesh is polygonal.
+   */
+  bool isPolygonal() const;
+
   //void addPanels(const PanelVector& panels) {
   //  panels_.insert()
   //}

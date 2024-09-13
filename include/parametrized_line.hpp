@@ -70,6 +70,11 @@ public:
    */
   double length() const;
 
+  /**
+   * See documentation in AbstractParametrizedCurve
+   */
+  bool isLineSegment() const { return true; }
+
 private:
   /**
    * private const fields for storing the starting and

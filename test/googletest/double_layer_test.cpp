@@ -44,7 +44,7 @@ Eigen::VectorXcd K;
 // set variables for reading operator from file
 Eigen::VectorXcd K_expected(numpanels);
 std::ifstream fp_data;
-double real, imag;
+double re, im;
 char sign;
 int i = 0;
 std::string path = "/home/diego/Uni/Thesis/HelmholtzBEM/raw_data/double_layer_i_" + std::to_string(numpanels) + ".dat";
@@ -57,8 +57,8 @@ TEST(DoubleLayerTest, compare_row) {
     K = builder.getDoubleLayer().block(0,0,1,numpanels).transpose();
     // read first row of operator from file
     fp_data.open(path);
-    while(fp_data >> real >> imag) {
-        K_expected(i) = complex_t((sign=='-')?-real:real,imag);
+    while(fp_data >> re >> im) {
+        K_expected(i) = complex_t((sign=='-')?-re:re,im);
         i++;
         if (i==numpanels) break;
         fp_data >> sign >> sign;

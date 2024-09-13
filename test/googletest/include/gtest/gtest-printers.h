@@ -977,15 +977,15 @@ struct TuplePolicy {
   typedef TupleT Tuple;
   static const size_t tuple_size = ::std::tr1::tuple_size<Tuple>::value;
 
-  template <size_t I>
-  struct tuple_element : ::std::tr1::tuple_element<static_cast<int>(I), Tuple> {
+  template <size_t N>
+  struct tuple_element : ::std::tr1::tuple_element<static_cast<int>(N), Tuple> {
   };
 
-  template <size_t I>
+  template <size_t N>
   static typename AddReference<const typename ::std::tr1::tuple_element<
-      static_cast<int>(I), Tuple>::type>::type
+      static_cast<int>(N), Tuple>::type>::type
   get(const Tuple& tuple) {
-    return ::std::tr1::get<I>(tuple);
+    return ::std::tr1::get<N>(tuple);
   }
 };
 template <typename TupleT>
@@ -998,13 +998,13 @@ struct TuplePolicy< ::std::tuple<Types...> > {
   typedef ::std::tuple<Types...> Tuple;
   static const size_t tuple_size = ::std::tuple_size<Tuple>::value;
 
-  template <size_t I>
-  struct tuple_element : ::std::tuple_element<I, Tuple> {};
+  template <size_t N>
+  struct tuple_element : ::std::tuple_element<N, Tuple> {};
 
-  template <size_t I>
-  static const typename ::std::tuple_element<I, Tuple>::type& get(
+  template <size_t N>
+  static const typename ::std::tuple_element<N, Tuple>::type& get(
       const Tuple& tuple) {
-    return ::std::get<I>(tuple);
+    return ::std::get<N>(tuple);
   }
 };
 template <typename... Types>

@@ -4,8 +4,11 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <execution>
+#include <random>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
 #include "find_roots.hpp"
 
 #define MAXIT 1000
@@ -1607,4 +1610,117 @@ double mifflin_five_point(double a, double fa, double b, double fb, double guess
         std::cerr << "Warning: the maximum number of iterations in Mifflin's method was exceeded" << std::endl;
 #endif
     return xo;
+}
+
+size_t opt_subdiv(const std::function<double(double)> &f, double x_min, double x_max,
+                  size_t batch_size, size_t limit, double tol,
+                  std::vector<double> &x, std::vector<double> &y, std::vector<size_t> &p) {
+    std::vector<std::pair<double,double> > xy;
+    xy.push_back(std::make_pair(x_min, f(x_min)));
+    xy.push_back(std::make_pair(x_max, f(x_max)));
+    double d = x_max - x_min, x0;
+    std::vector<std::pair<double,double> >::const_iterator it;
+    size_t count = 0, mc = 0, i, n = 0;
+    std::vector<double> x_tmp(batch_size);
+    std::vector<size_t> ind(batch_size);
+    std::iota(ind.begin(), ind.end(), 0);
+    std::random_device rd {};
+    std::mt19937 gen { rd() };
+    std::uniform_real_distribution<> ud { 0, 1 };
+    gsl_interp_accel *acc = gsl_interp_accel_alloc();
+    gsl_spline *spline;
+    double *xs = NULL, *ys = NULL, sigma = -1., mu = 0.;
+    unsigned iter = 0;
+    while (count < limit && ++iter < 1000) {
+        if (n > 3) {
+            spline = gsl_spline_alloc(gsl_interp_steffen, n);
+            xs = (double*)realloc(xs, n * sizeof(double));
+            ys = (double*)realloc(ys, n * sizeof(double));
+            for (it = xy.begin(); it != xy.end(); ++it) {
+                xs[it - xy.begin()] = it->first;
+                ys[it - xy.begin()] = it->second;
+            }
+            gsl_spline_init(spline, xs, ys, n);
+        }
+        for (i = 0; i < batch_size; ++i) {
+            do {
+                if (iter % 2 || sigma < 0. || sigma > 3. * d)
+                    x0 = x_min + ud(gen) * d;
+                else {
+                    std::normal_distribution<> normd { mu, sigma };
+                    do x0 = normd(gen); while (x0 <= x_min || x0 >= x_max);
+                }
+                for (it = xy.begin(); it != xy.end(); ++it) {
+                    if (std::abs(x0 - it->first) < tol * d)
+                        break;
+                }
+            } while (it != xy.end());
+            x_tmp[i] = x0;
+        }
+        xy.resize(n + batch_size);
+        std::transform(std::execution::par, ind.cbegin(), ind.cend(), xy.begin() + n, [&](auto j) {
+            double xj = x_tmp[j], yj = f(xj);
+            return std::make_pair(xj, yj);
+        });
+        double errn = std::numeric_limits<double>::infinity();
+        if (n > 3) {
+            double err, err2 = 0., erravg = 0., errmax = 0.;
+            unsigned cnt = 0;
+            mu = 0.;
+            for (it = xy.begin() + n; it != xy.end(); ++it) {
+                double y_spl;
+                int status = gsl_spline_eval_e(spline, it->first, acc, &y_spl);
+                if (status == GSL_SUCCESS) {
+                    err = std::abs(it->second - y_spl);
+                    erravg += err;
+                    if (err > errmax)
+                        errmax = err;
+                    mu += err * it->first;
+                    err2 += err * err;
+                    ++cnt;
+                }
+            }
+            erravg /= double(cnt);
+            sigma = d * erravg * (double(cnt) - 1.) / (6. * (errmax - erravg));
+            mu /= erravg * double(cnt);
+            gsl_spline_free(spline);
+            double ymin = std::numeric_limits<double>::max(), ymax = 0.;
+            for (it = xy.begin(); it != xy.end(); ++it) {
+                if (it->second > ymax)
+                    ymax = it->second;
+                if (it->second < ymin)
+                    ymin = it->second;
+            }
+            err2 /= double(cnt);
+            errn = std::sqrt(err2) / (ymax - ymin);
+        }
+        std::sort(xy.begin(), xy.end());
+        n += batch_size;
+        p.clear();
+        for (i = 1; i + 1 < n; ++i) {
+            if (xy[i].second < std::min(xy[i-1].second, xy[i+1].second))
+                p.push_back(i);
+        }
+        if (p.size() > mc) {
+            count = 0;
+            mc = p.size();
+        } else count++;
+#ifdef CMDL
+        std::cout << "\rPoints: " << n << ", Minima: " << p.size() << ", Error: " << errn << "    ";
+        std::flush(std::cout);
+#endif
+    }
+#ifdef CMDL
+    std::cout << std::endl;
+#endif
+    if (xs != NULL) free(xs);
+    if (ys != NULL) free(ys);
+    x.clear(); y.clear();
+    x.reserve(n); y.reserve(n);
+    for (it = xy.begin(); it != xy.end(); ++it) {
+        x.push_back(it->first);
+        y.push_back(it->second);
+    }
+    gsl_interp_accel_free(acc);
+    return n;
 }

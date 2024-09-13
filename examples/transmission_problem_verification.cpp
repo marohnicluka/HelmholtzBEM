@@ -39,6 +39,8 @@ complex_t ii = complex_t(0,1.);
 
 int main(int argc, char** argv) {
 
+    assert(argc == 7);
+
     // define radius of circle refraction index and initial wavenumber
     double eps = atof(argv[1]);
     double c_i = atof(argv[3]);
@@ -102,19 +104,20 @@ int main(int argc, char** argv) {
     // Loop over number of panels
     for (unsigned i = 0; i < n_runs; i++) {
 
-        // generate mesh on boudary
+        // generate mesh on boundary
         ParametrizedMesh mesh(curve.split(numpanels[i]));
 
         // compute interpolation coefficients
         // in FEM-sapces for resulting waves
         // DEBUG auto start = high_resolution_clock::now();
-        Eigen::VectorXcd sol = tp::direct_second_kind::solve(
-                mesh, u_i_dir, u_i_del, order, k, c_o, c_i);
+        Eigen::VectorXcd sol = tp::direct_second_kind::solve(mesh, u_i_dir, u_i_del, order, k, c_o, c_i);
         // DEBUG auto end = high_resolution_clock::now();
         // DEBUG auto duration = duration_cast<milliseconds>(end - start);
 
+        unsigned N = 20;
+        QuadRule GaussQR = getGaussQR(N,0.,1.);
         // compute mass matrix for projection on to orthonromal basis functions
-        Eigen::MatrixXcd M_cont = mass_matrix::GalerkinMatrix(mesh, cont_space, cont_space, getGaussQR(order, 0., 1.));
+        Eigen::MatrixXcd M_cont = mass_matrix::GalerkinMatrix(mesh, cont_space, cont_space, GaussQR);
         Eigen::MatrixXcd M(2*numpanels[i],2*numpanels[i]);
         M = Eigen::MatrixXcd::Zero(2*numpanels[i],2*numpanels[i]);
         M.block(0,0,numpanels[i],numpanels[i]) = M_cont;
@@ -126,8 +129,6 @@ int main(int argc, char** argv) {
         Eigen::VectorXcd u_t_N(2*numpanels[i]);
         u_t_N << u_t_dir_N, u_t_neu_N;
         const PanelVector &panels_coarse = mesh.getPanels();
-        unsigned N = 20;
-        QuadRule GaussQR = getGaussQR(N,0.,1.);
         std::cout << std::endl;
 
 

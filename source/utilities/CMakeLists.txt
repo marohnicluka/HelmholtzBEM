@@ -4,23 +4,21 @@ add_library(compute_SV_der STATIC singular_values.cpp)
 target_link_libraries(compute_SV_der quadrature)
 
 add_library(compute_SV_der_arnoldi STATIC singular_values_arnoldi.cpp)
-target_link_libraries(compute_SV_der_arnoldi arpp_eig_interface blas lapacke)
+target_link_libraries(compute_SV_der_arnoldi arpp_eig_interface)
 
 add_library(gen_sol_op STATIC gen_sol_op.cpp)
-target_link_libraries(gen_sol_op sol_op)
+target_link_libraries(gen_sol_op galerkin_builder sol_op sol_op_der sol_op_der2)
 
 add_library(find_roots STATIC find_roots.cpp)
-target_link_libraries(find_roots gsl)
+target_link_libraries(find_roots gsl tbb)
 
 add_library(arpp_eig_interface STATIC arpp_eig_interface.cpp)
 
 add_library(generate_solution STATIC gen_sol.cpp)
 
 add_library(complex_bessel STATIC cbessel.cpp)
-target_link_libraries(complex_bessel tbb)
 
 add_library(randomized_svd STATIC randsvd.cpp)
-#target_link_libraries(randomized_svd lapacke blas)
 
 add_library(incoming STATIC incoming.cpp)
 
@@ -31,4 +29,4 @@ add_library(complex_spline STATIC cspline.cpp)
 target_link_libraries(complex_spline gsl)
 
 add_library(solvers STATIC solvers.cpp)
-target_link_libraries(solvers quadrature sol_op complex_spline scatterer tbb)
+target_link_libraries(solvers quadrature galerkin_builder complex_spline scatterer gen_sol_op lapack tbb)

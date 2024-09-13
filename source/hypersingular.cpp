@@ -70,7 +70,7 @@
                         // Normalizing the normal vector
                         normal = normal / normal.norm();
                         if (abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon ) {
-                            result = ii*complex_bessel::H1(0,k*sqrt(c)* (pi[s] - pi_p[t]).norm())/4.;
+                            result = ii*complex_bessel::HankelH1(0,k*sqrt(c)* (pi[s] - pi_p[t]).norm())/4.;
                         } else if ((pi[s]-pi_p[t]).norm() > epsilon ){
                             result = -1/(2*M_PI)*log((pi[s]-pi_p[t]).norm());                        }
                         return result * (F_arc(t) * G_arc(s) - k*sqrt(c)* k*sqrt(c)* F(t) * G(s) * normal.dot(normal_p));
@@ -158,13 +158,13 @@
                         normal = normal / normal.norm();
                         if (swap){
                             if (abs(k*sqrt(c))*(pi[s]-pi_p.swapped_op(t)).norm() > epsilon ) {
-                                result = ii*complex_bessel::H1(0, k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm())/4.;
+                                result = ii*complex_bessel::HankelH1(0, k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm())/4.;
                             } else if ((pi[s]-pi_p.swapped_op(t)).norm() > epsilon ){
                                 result = -1/(2*M_PI)*log((pi[s]-pi_p.swapped_op(t)).norm());
                             }
                         }else {
                             if (abs(k*sqrt(c))*(pi.swapped_op(s)-pi_p[t]).norm() > epsilon ) {
-                                result = ii*complex_bessel::H1(0, k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm())/4.;
+                                result = ii*complex_bessel::HankelH1(0, k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm())/4.;
                             } else if ((pi.swapped_op(s)-pi_p[t]).norm() > epsilon ){
                                 result = -1/(2*M_PI)*log((pi.swapped_op(s)-pi_p[t]).norm());
                             }
@@ -236,7 +236,7 @@
                         // Normalizing the normal vector
                         normal = normal / normal.norm();
                         if (abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon ) {
-                            result = ii*complex_bessel::H1(0,k*sqrt(c)* (pi[s] - pi_p[t]).norm())/4.;
+                            result = ii*complex_bessel::HankelH1(0,k*sqrt(c)* (pi[s] - pi_p[t]).norm())/4.;
                         } else if ((pi[s]-pi_p[t]).norm() > epsilon ){
                             result = -1/(2*M_PI)*log((pi[s]-pi_p[t]).norm());
                         }
@@ -283,12 +283,12 @@
                     Eigen::MatrixXcd interaction_matrix =
                             InteractionMatrix(*panels[i], *panels[j], space, GaussQR, CGaussQR, k, c);
                     // Local to global mapping of the elements in interaction matrix
-                    for (unsigned int I = 0; I < Q; ++I) {
-                        for (unsigned int J = 0; J < Q; ++J) {
-                            int II = space.LocGlobMap(I + 1, i + 1, numpanels) - 1;
-                            int JJ = space.LocGlobMap(J + 1, j + 1, numpanels) - 1;
+                    for (unsigned int ii = 0; ii < Q; ++ii) {
+                        for (unsigned int jj = 0; jj < Q; ++jj) {
+                            int II = space.LocGlobMap(ii + 1, i + 1, numpanels) - 1;
+                            int JJ = space.LocGlobMap(jj + 1, j + 1, numpanels) - 1;
                             // Filling the Galerkin matrix entries
-                            output(II, JJ) += interaction_matrix(I, J);
+                            output(II, JJ) += interaction_matrix(ii, jj);
                         }
                     }
                 }

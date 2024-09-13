@@ -63,7 +63,7 @@ void FirstKindDirectDirichlet::run() {
         // compute interpolation coefficients of known solution Neumann data in FEM-space
         Eigen::VectorXcd res_known = discont_space.Interpolate_helmholtz(fund_sol_neu,mesh);
         // compute mass matrix for projection onto orthonormal basis functions
-        Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh,discont_space,discont_space,order);
+        Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh,discont_space,discont_space);
 
         // setup mesh and QR for computing residuals
         const PanelVector &panels_coarse = mesh.getPanels();

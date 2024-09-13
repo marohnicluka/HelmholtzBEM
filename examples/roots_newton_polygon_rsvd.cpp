@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
     }
     // construction of a ParametrizedMesh object from the vector of panels
     unsigned Npanels;
-    double rfac = 1.0; // panel length shrink factor
+    double rfac = 0.5; // panel length shrink factor
     if (strlen(argv[6]) > 1 && argv[6][1] == '.') {
         double f = atof(argv[6]);
         Npanels = scatterer::auto_num_panels(poly_x, poly_y, f);

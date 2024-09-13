@@ -70,6 +70,11 @@ public:
    */
   double length() const;
 
+  /**
+   * See documentation in AbstractParametrizedCurve
+   */
+  bool isLineSegment() const { return false; }
+
   //private:
   /**
    * Private field for storing the center

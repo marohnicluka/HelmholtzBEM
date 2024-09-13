@@ -46,7 +46,6 @@ For <tt>arch</tt> based distros:
 ~~~
 sudo pacman -S arpack
 sudo pacman -S lapack
-sudo pacman -S lapacke
 sudo pacman -S gsl
 sudo pacman -S tbb2020
 ~~~
@@ -55,7 +54,6 @@ For <tt>debian</tt> based distros:
 sudo apt install libboost-all-dev
 sudo apt install libarpack2-dev 
 sudo apt install liblapack3-dev
-sudo apt install liblapacke-dev
 sudo apt install libgsl-dev
 sudo apt install libtbb-dev
 ~~~
@@ -94,7 +92,7 @@ to update the system. You may be asked to relaunch the <tt>MINGW64</tt> terminal
 #### Installing necessary packages
 To install dependencies, copy the following command to the <tt>MINGW64</tt> terminal:
 ~~~
-pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-lapacke mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-gsl mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
+pacman -S base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-gcc-fortran mingw-w64-x86_64-lapack mingw-w64-x86_64-arpack mingw-w64-x86_64-boost mingw-w64-x86_64-gsl mingw-w64-x86_64-python mingw-w64-x86_64-tbb mingw-w64-x86_64-cmake
 ~~~
 Next, add a symbolic link to the <tt>tbb</tt> shared library by issuing the command
 ~~~

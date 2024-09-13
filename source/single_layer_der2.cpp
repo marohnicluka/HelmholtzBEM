@@ -63,12 +63,12 @@
                         complex_t result = complex_t(0.,0.);
                         if (swap) {
                             if ( abs(k*sqrt(c))*(pi[s]-pi_p.swapped_op(t)).norm() > epsilon) {
-                                result = complex_bessel::H1p(0,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm(),2)
+                                result = complex_bessel::HankelH1p(0,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm(),2)
                                                            *(pi[s]-pi_p.swapped_op(t)).squaredNorm();
                             };
                         } else {
                             if ( abs(k*sqrt(c))*(pi.swapped_op(s)-pi_p[t]).norm() > epsilon) {
-                                result = complex_bessel::H1p(0,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm(),2)
+                                result = complex_bessel::HankelH1p(0,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm(),2)
                                          *(pi.swapped_op(s)-pi_p[t]).squaredNorm();
                             };
                         }
@@ -119,7 +119,7 @@
                     auto integrand = [&](double s, double t) {
                         complex_t result = complex_t(0.0,0.0);
                         if ( abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon) {
-                            result = complex_bessel::H1p(0,k*sqrt(c)*(pi[s]-pi_p[t]).norm(),2)
+                            result = complex_bessel::HankelH1p(0,k*sqrt(c)*(pi[s]-pi_p[t]).norm(),2)
                                      *(pi[s]-pi_p[t]).squaredNorm();
                         }
                         return result*F(t)*G(s);
@@ -169,7 +169,7 @@
                     auto integrand = [&](double s, double t) {
                         complex_t result = complex_t(0.0,0.0);
                         if ( abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon) {
-                            result = complex_bessel::H1p(0,k*sqrt(c)*(pi[s]-pi_p[t]).norm(),2)
+                            result = complex_bessel::HankelH1p(0,k*sqrt(c)*(pi[s]-pi_p[t]).norm(),2)
                                      *(pi[s]-pi_p[t]).squaredNorm();
                         }
                         return result*F(t)*G(s);
@@ -215,12 +215,12 @@
                     Eigen::MatrixXcd interaction_matrix =
                             InteractionMatrix(*panels[i], *panels[j], space, GaussQR, CGaussQR, k,c);
                     // Local to global mapping of the elements in interaction matrix
-                    for (unsigned int I = 0; I < Q; ++I) {
-                        for (unsigned int J = 0; J < Q; ++J) {
-                            int II = space.LocGlobMap(I + 1, i + 1, numpanels) - 1;
-                            int JJ = space.LocGlobMap(J + 1, j + 1, numpanels) - 1;
+                    for (unsigned int ii = 0; ii < Q; ++ii) {
+                        for (unsigned int jj = 0; jj < Q; ++jj) {
+                            int II = space.LocGlobMap(ii + 1, i + 1, numpanels) - 1;
+                            int JJ = space.LocGlobMap(jj + 1, j + 1, numpanels) - 1;
                             // Filling the Galerkin matrix entries
-                            output(II, JJ) += interaction_matrix(I, J);
+                            output(II, JJ) += interaction_matrix(ii, jj);
                         }
                     }
                 }

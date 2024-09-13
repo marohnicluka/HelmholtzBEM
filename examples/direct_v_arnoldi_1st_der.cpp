@@ -143,6 +143,7 @@ int main(int argc, char** argv) {
             file_out << k_temp.real() << " " << duration_direct.count() << " " << duration_arnoldi.count() << " " << duration_op.count() << std::endl;
             file_out.close();
             // write timings to file
+#if 0
             file_out.open(file_iter, std::ios_base::app);
             file_out << k_temp.real() << " " << iter_counter_restart << " "
                      << iter_counter_matvec << std::endl;
@@ -151,6 +152,7 @@ int main(int argc, char** argv) {
             // reset external variables for counting in next iteration
             iter_counter_matvec = 0;
             iter_counter_restart = 0;
+#endif
         }
     }
     return 0;

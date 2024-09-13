@@ -270,4 +270,22 @@ double brent_gsl_with_values(double a, double fa, double b, double fb, double gu
 double mifflin_five_point(double a, double fa, double b, double fb, double guess, double fguess,
                           std::function<double(double)> &f, double tol, unsigned int &ic);
 
+/**
+ * Returns subdivision of interval [x_min,x_max] such that
+ * all local minima of f in that interval are detected.
+ *
+ * @param f real function of real argument
+ * @param x_min lower bound
+ * @param x_max upper bound
+ * @param batch_size how many points to add in each iteration
+ * @param limit stop after this many iterations with no change in minima count
+ * @param tol smallest allowed distance between two consecutive points
+ * @param x sorted vector of reals starting with x_min and ending with x_max
+ * @param y function values at x
+ * @param p positions of local minima
+ */
+size_t opt_subdiv(const std::function<double(double)> &f, double x_min, double x_max,
+                  size_t batch_size, size_t limit, double tol,
+                  std::vector<double> &x, std::vector<double> &y, std::vector<size_t> &p);
+
 #endif //FIND_ROOTSHPP

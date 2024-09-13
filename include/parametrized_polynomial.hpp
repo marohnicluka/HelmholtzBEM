@@ -68,6 +68,11 @@ public:
    */
   PanelVector split(unsigned int) const;
 
+  /**
+   * See documentation in AbstractParametrizedCurve
+   */
+  bool isLineSegment() const { return false; } // the degree is guaranteed to be larger than one
+
 private:
   /**
    * List of coefficients for the polynomial parametrization

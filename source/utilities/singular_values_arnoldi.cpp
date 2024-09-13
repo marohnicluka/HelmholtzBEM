@@ -7,15 +7,9 @@
 #include "arpp_eig_interface.hpp"
 #include "st_vec_storage.hpp"
 
-#define EIGEN_USE_BLAS
-#define EIGEN_USE_LAPACKE
-
 typedef std::complex<double> complex_t;
 
-int iter_counter_restart;
-int iter_counter_matvec;
-
-#define ARNOLDI_MAXITER 1000
+#define ARNOLDI_MAXITER std::numeric_limits<int>::max()
 #define ARPACK_SILENT_MODE 1
 
 namespace arnoldi {
@@ -52,7 +46,6 @@ namespace arnoldi {
                     PutVectorEig.segment(0, N) = lu_adjoint.solve(GetVectorEig.segment(N, N));
                     PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
                     eig_to_arpp(PutVectorEig, prob.PutVector());
-                    iter_counter_matvec++;
                 }
             }
             // write results into our common data structure
@@ -62,10 +55,6 @@ namespace arnoldi {
                 // abs inconsistent across platforms, can cast to int
                 res[i] = std::abs(1. / prob.Eigenvalue(2 * count - 2 * i - 1).real());
             }
-            /*st_vec_storage.add_vec(k,start);
-            delete start;
-            st_vec_storage.status();*/
-            iter_counter_restart = prob.GetIter();
         } catch (ArpackError err) {
 #ifdef CMDL
             if (err.Status() == -107)
@@ -82,41 +71,42 @@ namespace arnoldi {
                                double acc) {
         // get dimensions of operator
         const unsigned N = T.cols();
-        // precomputation for finding EVs with arpack++
-        Eigen::PartialPivLU<Eigen::MatrixXcd> lu(T);
-        ARrcCompStdEig<double> prob(2 * N, 2*count, "LM",0,acc,std::numeric_limits<int>::max(), NULL);
-
-        // iterate until entire space is searched
-        while (!prob.ArnoldiBasisFound()) {
-
-            // Calling ARPACK FORTRAN code. Almost all work needed to
-            // find an Arnoldi basis is performed by TakeStep.
-            prob.TakeStep();
-
-            if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
-                // Performing matrix-vector multiplication in Eigen.
-                // In regular mode, w = Av must be performed whenever
-                // GetIdo is equal to 1 or -1. GetVector supplies a pointer
-                // to the input vector, v, and PutVector a pointer to the
-                // output vector, w.
-
-                Eigen::VectorXcd PutVectorEig(2 * N);
-                Eigen::VectorXcd GetVectorEig(2 * N);
-
-                arpp_to_eig(prob.GetVector(), GetVectorEig);
-                PutVectorEig.segment(0, N) = lu.adjoint().solve(GetVectorEig.segment(N, N));
-                PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
-                eig_to_arpp(PutVectorEig, prob.PutVector());
-                iter_counter_matvec++;
-            }
-        }
-        // write results into our common data structure
-        prob.FindEigenvectors();
-        prob.FindEigenvalues();
         Eigen::VectorXd res_vals(count);
         Eigen::MatrixXcd res_vectors(2*N, count);
-        arpp_to_eig(prob, res_vals, res_vectors);
+        // precomputation for finding EVs with arpack++
+        Eigen::PartialPivLU<Eigen::MatrixXcd> lu(T);
+        {
+            std::unique_lock lck(mtx);
+            ARrcCompStdEig<double> prob(2 * N, 2*count, "LM",0,acc,std::numeric_limits<int>::max(), NULL);
 
+            // iterate until entire space is searched
+            while (!prob.ArnoldiBasisFound()) {
+
+                // Calling ARPACK FORTRAN code. Almost all work needed to
+                // find an Arnoldi basis is performed by TakeStep.
+                prob.TakeStep();
+
+                if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
+                    // Performing matrix-vector multiplication in Eigen.
+                    // In regular mode, w = Av must be performed whenever
+                    // GetIdo is equal to 1 or -1. GetVector supplies a pointer
+                    // to the input vector, v, and PutVector a pointer to the
+                    // output vector, w.
+
+                    Eigen::VectorXcd PutVectorEig(2 * N);
+                    Eigen::VectorXcd GetVectorEig(2 * N);
+
+                    arpp_to_eig(prob.GetVector(), GetVectorEig);
+                    PutVectorEig.segment(0, N) = lu.adjoint().solve(GetVectorEig.segment(N, N));
+                    PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
+                    eig_to_arpp(PutVectorEig, prob.PutVector());
+                }
+            }
+            // write results into our common data structure
+            prob.FindEigenvectors();
+            prob.FindEigenvalues();
+            arpp_to_eig(prob, res_vals, res_vectors);
+        }
         Eigen::MatrixXcd W_der = Eigen::MatrixXcd::Zero(2 * N, 2 * N);
         W_der.block(0, N, N, N) = T_der;
         W_der.block(N, 0, N, N) = T_der.adjoint();
@@ -134,7 +124,6 @@ namespace arnoldi {
                 res(i, 1) = (x.dot(W_der * x)).real();
             }
         }
-        iter_counter_restart = prob.GetIter();
         return res;
     }
 
@@ -146,39 +135,41 @@ namespace arnoldi {
                                double acc) {
         // get dimensions of operator
         const unsigned N = T.cols();
-        // precomputation for finding EVs with arpack++
-        Eigen::PartialPivLU<Eigen::MatrixXcd> lu(T);
-        ARrcCompStdEig<double> prob(2 * N, 2*count, "LM", 0, acc, std::numeric_limits<int>::max(), NULL);
-
-        // iterate until entire space is searched
-        while (!prob.ArnoldiBasisFound()) {
-
-            // Calling ARPACK FORTRAN code. Almost all work needed to
-            // find an Arnoldi basis is performed by TakeStep.
-            prob.TakeStep();
-
-            if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
-                // Performing matrix-vector multiplication in Eigen.
-                // In regular mode, w = Av must be performed whenever
-                // GetIdo is equal to 1 or -1. GetVector supplies a pointer
-                // to the input vector, v, and PutVector a pointer to the
-                // output vector, w.
-
-                Eigen::VectorXcd PutVectorEig(2 * N);
-                Eigen::VectorXcd GetVectorEig(2 * N);
-
-                arpp_to_eig(prob.GetVector(), GetVectorEig);
-                PutVectorEig.segment(0, N) = lu.adjoint().solve(GetVectorEig.segment(N, N));
-                PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
-                eig_to_arpp(PutVectorEig, prob.PutVector());
-                iter_counter_matvec++;
-            }
-        }
-        // write results into our common data structure
-        prob.FindEigenvectors();
         Eigen::VectorXd res_vals(count);
         Eigen::MatrixXcd res_vectors(2 * N, count);
-        arpp_to_eig(prob, res_vals, res_vectors);
+        // precomputation for finding EVs with arpack++
+        Eigen::PartialPivLU<Eigen::MatrixXcd> lu(T);
+        {
+            std::unique_lock lck(mtx);
+            ARrcCompStdEig<double> prob(2 * N, 2*count, "LM", 0, acc, std::numeric_limits<int>::max(), NULL);
+
+            // iterate until entire space is searched
+            while (!prob.ArnoldiBasisFound()) {
+
+                // Calling ARPACK FORTRAN code. Almost all work needed to
+                // find an Arnoldi basis is performed by TakeStep.
+                prob.TakeStep();
+
+                if ((prob.GetIdo() == 1) || (prob.GetIdo() == -1)) {
+                    // Performing matrix-vector multiplication in Eigen.
+                    // In regular mode, w = Av must be performed whenever
+                    // GetIdo is equal to 1 or -1. GetVector supplies a pointer
+                    // to the input vector, v, and PutVector a pointer to the
+                    // output vector, w.
+
+                    Eigen::VectorXcd PutVectorEig(2 * N);
+                    Eigen::VectorXcd GetVectorEig(2 * N);
+
+                    arpp_to_eig(prob.GetVector(), GetVectorEig);
+                    PutVectorEig.segment(0, N) = lu.adjoint().solve(GetVectorEig.segment(N, N));
+                    PutVectorEig.segment(N ,N) = lu.solve(GetVectorEig.segment(0, N));
+                    eig_to_arpp(PutVectorEig, prob.PutVector());
+                }
+            }
+            // write results into our common data structure
+            prob.FindEigenvectors();
+            arpp_to_eig(prob, res_vals, res_vectors);
+        }
         // build Wielandt matrix
         Eigen::MatrixXcd W = Eigen::MatrixXcd::Zero(2 * N, 2 * N);
         W.block(0, N, N, N) = T;
@@ -249,7 +240,6 @@ namespace arnoldi {
                 res(i, 2) = -ev_der2.real();
             }
         }
-        iter_counter_restart = prob.GetIter();
         return res;
     }
 

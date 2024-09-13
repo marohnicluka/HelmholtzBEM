@@ -1,7 +1,6 @@
 #include <iostream>
 #include <execution>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
-#include "gen_sol_op.hpp"
 #include "solvers.hpp"
 #include "mass_matrix.hpp"
 #include "continuous_space.hpp"
@@ -13,6 +12,13 @@
 #include "scatterer.hpp"
 
 //#define EXTERNAL_INTEGRATION 1
+//#define PARALLEL_KERNEL_COMPUTATION 1
+#define USE_LAPACK_SOLVER 1
+
+#ifdef USE_LAPACK_SOLVER
+#include "complex.h"
+#include "lapacke.h"
+#endif
 
 typedef std::complex<double> complex_t;
 namespace bvp {
@@ -72,48 +78,32 @@ namespace bvp {
 } // namespace bvp
 namespace tp {
     namespace direct_second_kind {
-        Eigen::VectorXcd in_traces(const ParametrizedMesh &mesh,
-                                   const std::function<complex_t(double, double)> u_inc,
-                                   const std::function<Eigen::Vector2cd (double, double)> u_inc_del,
-                                   const std::complex<double> &k,
-                                   const double c_o,
-                                   const double c_i,
-                                   GalerkinBuilder &builder,
-                                   Eigen::MatrixXcd &A) {
-            builder.assembleAll(k, c_o);
-            Eigen::MatrixXcd K_o = builder.getDoubleLayer();
-            Eigen::MatrixXcd W_o = builder.getHypersingular();
-            Eigen::MatrixXcd V_o = builder.getSingleLayer();
-            builder.assembleAll(k, c_i);
-            Eigen::MatrixXcd K_i = builder.getDoubleLayer();
-            Eigen::MatrixXcd W_i = builder.getHypersingular();
-            Eigen::MatrixXcd V_i = builder.getSingleLayer();
-            // Build matrices for solving linear system of equations
-            const auto &bd = builder.getData();
-            Eigen::MatrixXcd M_cont = mass_matrix::GalerkinMatrix(mesh, bd.test_space, bd.trial_space, bd.GaussQR);
-            A.resize(K_o.rows() + W_o.rows(), K_o.cols() + V_o.cols());
-            A.block(0, 0, K_o.rows(), K_o.cols()) = (-K_o + K_i)+M_cont;
-            A.block(0, K_o.cols(), V_o.rows(), V_o.cols()) = (V_o-V_i);
-            A.block(K_o.rows(), 0, W_o.rows(), W_o.cols()) = W_o-W_i;
-            A.block(K_o.rows(), K_o.cols(), K_o.cols(), K_o.rows()) =
-                    (K_o-K_i).transpose()+M_cont;
+        void A_rhs(const ParametrizedMesh &mesh,
+                   const std::function<complex_t(double, double)> u_inc,
+                   const std::function<Eigen::Vector2cd (double, double)> u_inc_del,
+                   const std::complex<double> &k,
+                   const double c_o,
+                   const double c_i,
+                   SolutionsOperator &sol_op,
+                   Eigen::MatrixXcd &A,
+                   Eigen::VectorXcd &rhs) {
+            sol_op.gen_sol_op(k, c_o, c_i, A);
+            Eigen::MatrixXcd M_cont = sol_op.mass_matrix();
             // Build matrices for right hand side
+            const auto &K_o = sol_op.K_ext(), &V_o = sol_op.V_ext(), &W_o = sol_op.W_ext();
             Eigen::MatrixXcd A_o(K_o.rows() + W_o.rows(), K_o.cols() + V_o.cols());
             A_o.block(0, 0, K_o.rows(), K_o.cols()) = -K_o + 0.5*M_cont;
             A_o.block(0, K_o.cols(), V_o.rows(), V_o.cols()) = V_o;
             A_o.block(K_o.rows(), 0, W_o.rows(), W_o.cols()) = W_o;
-            A_o.block(K_o.rows(), K_o.cols(), K_o.cols(), K_o.rows()) =
-                    K_o.transpose()+0.5*M_cont;
+            A_o.block(K_o.rows(), K_o.cols(), K_o.cols(), K_o.rows()) = K_o.transpose()+0.5*M_cont;
             // Build vectors from incoming wave data for right hand side
+            const auto &bd = sol_op.getBuilderData();
             Eigen::VectorXcd u_inc_dir_N = bd.test_space.Interpolate_helmholtz(u_inc, mesh);
             Eigen::VectorXcd u_inc_neu_N = bd.trial_space.Interpolate_helmholtz_neu(u_inc_del, mesh);
             Eigen::VectorXcd u_inc_N(bd.getTestSpaceDimension() + bd.getTrialSpaceDimension());
             u_inc_N << u_inc_dir_N, u_inc_neu_N;
             // compute right hand side
-            Eigen::VectorXcd rhs = (A_o * u_inc_N);
-            // Solving for coefficients
-            Eigen::HouseholderQR<Eigen::MatrixXcd> dec(A);
-            return dec.solve(rhs);
+            rhs = (A_o * u_inc_N);
         }
 
         Eigen::VectorXcd solve(const ParametrizedMesh &mesh,
@@ -124,11 +114,32 @@ namespace tp {
                                const double c_o,
                                const double c_i) {
             QuadRule GaussQR = getGaussQR(order, 0., 1.);
-            ContinuousSpace<1> cont_space;
-            BuilderData builder_data(mesh, cont_space, cont_space, order);
-            GalerkinBuilder builder(builder_data);
+            ContinuousSpace<1> test_space;
+            BuilderData builder_data(mesh, test_space, test_space, order);
+            auto sol_op = SolutionsOperator(builder_data, false);
             Eigen::MatrixXcd so;
-            return in_traces(mesh, u_inc, u_inc_del, k, c_o, c_i, builder, so);
+            Eigen::VectorXcd rhs;
+            A_rhs(mesh, u_inc, u_inc_del, k, c_o, c_i, sol_op, so, rhs);
+            // Solving for coefficients
+#ifdef USE_LAPACK_SOLVER
+            lapack_complex_double *a, *b;
+            lapack_int n = so.rows(), *ipiv = new lapack_int[n];
+            lapack_int info, lda = n, ldb = n, nrhs = 1;
+            a = reinterpret_cast<lapack_complex_double*>(so.data());
+            b = reinterpret_cast<lapack_complex_double*>(rhs.data());
+            LAPACK_zgesv(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info);
+            assert(info == 0);
+            delete[] ipiv;
+            Eigen::VectorXcd res(n);
+            for (int i = 0; i < n; ++i) {
+                auto bi = b[i];
+                res(i) = std::complex<double>(creal(bi), cimag(bi));
+            }
+            return res;
+#else
+            Eigen::PartialPivLU<Eigen::MatrixXcd> dec(so);
+            return dec.solve(rhs);
+#endif
         }
 
         void in_solve(const ParametrizedMesh &mesh,
@@ -200,7 +211,8 @@ namespace tp {
             H1.resize(numpanels, n);
             std::vector<std::pair<size_t,size_t> > ind(numpanels * n);
             std::iota(ind.begin(), ind.end(), PairInc<size_t>(0, 0, numpanels));
-            for (size_t I = 0; I < grid_size_x; ++I) for (size_t J = 0; J < grid_size_y; ++J) {
+            auto kernel_func = complex_bessel::Hankel1Real01(numpanels, n);
+            for (size_t II = 0; II < grid_size_x; ++II) for (size_t JJ = 0; JJ < grid_size_y; ++JJ) {
                 unsigned i, prog = (100 * (++done)) / (grid_size_x * grid_size_y);
 #ifdef CMDL
                 auto pstr = std::to_string(prog);
@@ -208,29 +220,40 @@ namespace tp {
                 std::flush(std::cout);
 #endif
                 Eigen::Vector2d x;
-                x << lower_left_corner(0) + I * x_step, lower_left_corner(1) + J * y_step;
-                grid_X(I, J) = x(0);
-                grid_Y(I, J) = x(1);
+                x << lower_left_corner(0) + II * x_step, lower_left_corner(1) + JJ * y_step;
+                grid_X(II, JJ) = x(0);
+                grid_Y(II, JJ) = x(1);
                 double t0L;
                 if (scatterer::distance(mesh, x, &i, &t0L) < 1e-8) { // on the boundary
                     double len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t0L * mesh.getPanels()[i]->length();
-                    S(I, J) = trace_dir.eval(len);
+                    S(II, JJ) = trace_dir.eval(len);
                 } else {
                     inside = scatterer::inside_poly(mesh, x);
                     kappa = inside ? k_sqrt_ci : k_sqrt_co;
 #ifndef EXTERNAL_INTEGRATION
                     Z = Y + x(0) + 1i * x(1);
                     X = Z.cwiseAbs();
-                    if (k_real_positive) {
-                        for_each(std::execution::par_unseq, ind.cbegin(), ind.cend(), [&](const auto &ij) {
-                            size_t ii = ij.first, jj = ij.second;
+#ifndef PARALLEL_KERNEL_COMPUTATION
+                    if (k_real_positive)
+                        kernel_func.h1_01(kappa.real() * X, H0, H1);
+                    else
+#endif
+                    for_each(std::execution::par_unseq, ind.cbegin(), ind.cend(), [&](const auto &ij) {
+                        size_t ii = ij.first, jj = ij.second;
+#ifdef PARALLEL_KERNEL_COMPUTATION
+                        if (k_real_positive)
                             complex_bessel::H1_01(kappa.real() * X(ii, jj), H0(ii, jj), H1(ii, jj));
-                        });
-                    } else
-                        complex_bessel::H1_01_cplx<Eigen::Dynamic>(kappa * X, H0, H1);
+                        else {
+#endif
+                            H0(ii, jj) = complex_bessel::HankelH1(0., kappa * X(ii, jj));
+                            H1(ii, jj) = complex_bessel::HankelH1(1., kappa * X(ii, jj));
+#ifdef PARALLEL_KERNEL_COMPUTATION
+                        }
+#endif
+                    });
                     G = (H0 * (inside ? Trace_i_N : Trace_o_N)
                         - kappa * H1 * (inside ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
-                    S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * G.sum();
+                    S(II, JJ) = (inside ? 1. : -1.) * 1i * 0.25 * G.sum();
 #else
                     complex_t z = 0.;
                     for (i = 0; i < numpanels; ++i) {
@@ -242,8 +265,8 @@ namespace tp {
                             if (k_real_positive) {
                                 complex_bessel::H1_01(kappa.real() * d, h0, h1);
                             } else {
-                                h0 = complex_bessel::H1(0, kappa * d);
-                                h1 = complex_bessel::H1(1, kappa * d);
+                                h0 = complex_bessel::HankelH1(0, kappa * d);
+                                h1 = complex_bessel::HankelH1(1, kappa * d);
                             }
                             tD = trace_dir.eval(len);
                             tN = trace_neu.eval(len);
@@ -257,10 +280,10 @@ namespace tp {
                         };
                         z += boost::math::quadrature::gauss_kronrod<double, 15>::integrate(func, 0, 1, 10, 1e-6);
                     }
-                    S(I, J) = (inside ? 1. : -1.) * 1i * 0.25 * z;
+                    S(II, JJ) = (inside ? 1. : -1.) * 1i * 0.25 * z;
 #endif
                     if (add_u_inc && !inside)
-                        S(I, J) += u_inc(x(0), x(1));
+                        S(II, JJ) += u_inc(x(0), x(1));
                 }
             }
 #ifdef CMDL
@@ -282,12 +305,16 @@ namespace tp {
                                             Eigen::ArrayXXd &grid_X,
                                             Eigen::ArrayXXd &grid_Y,
                                             bool total_field,
-                                            GalerkinBuilder &builder,
+                                            SolutionsOperator &sol_op,
                                             Eigen::MatrixXcd &so) {
 #ifdef CMDL
             std::cout << "Computing boundary traces..." << std::endl;
 #endif
-            auto traces = in_traces(mesh, u_inc, u_inc_del, k, c_o, c_i, builder, so);
+            Eigen::VectorXcd rhs;
+            A_rhs(mesh, u_inc, u_inc_del, k, c_o, c_i, sol_op, so, rhs);
+            // Solving for coefficients
+            Eigen::HouseholderQR<Eigen::MatrixXcd> dec(so);
+            auto traces = dec.solve(rhs);
             unsigned numpanels = mesh.getNumPanels();
             ComplexSpline trace_dir(mesh, traces.head(numpanels));
             ComplexSpline trace_neu(mesh, traces.tail(numpanels));
@@ -326,4 +353,5 @@ namespace tp {
         }
 
     } // namespace direct_second_kind
+
 } // namespace tsp

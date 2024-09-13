@@ -62,6 +62,11 @@ public:
    */
   PanelVector split(unsigned int) const;
 
+  /**
+   * See documentation in AbstractParametrizedCurve
+   */
+  bool isLineSegment() const { return false; }
+
 private:
   /**
    * Private const field for storing the radius

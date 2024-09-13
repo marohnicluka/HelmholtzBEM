@@ -16,8 +16,10 @@
 class SolutionsOperator
 {
     const BuilderData &builder_data;
+    bool do_projection;
     Eigen::PartialPivLU<Eigen::MatrixXcd> lu;
     Eigen::MatrixXd M; // mass matrix
+    Eigen::MatrixXcd K_i, K_o, V_i, V_o, W_i, W_o;
     size_t dim_test, dim_trial;
     // solutions operator matrix assembly routines
     void gen_sol_op_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
@@ -33,7 +35,7 @@ public:
      * @param builder_data_in bulder data object
      * @param profiling_in whether to do time profiling
      */
-    SolutionsOperator(const BuilderData &builder_data_in);
+    SolutionsOperator(const BuilderData &builder_data_in, bool proj = true);
     // destructor
     ~SolutionsOperator() { }
     /**
@@ -45,8 +47,7 @@ public:
      * @param c_i refraction indef of inner domain (must not be smaller than c_o)
      * @param T complex matrix to which the solutions operator matrix will be stored
      */
-    void gen_sol_op(const std::complex<double> &k, double c_o, double c_i,
-                    Eigen::MatrixXcd &T);
+    void gen_sol_op(const std::complex<double> &k, double c_o, double c_i, Eigen::MatrixXcd &T);
     /**
      * Compute approximation of solutions operator for second-kind direct BIEs of
      * Helmholtz transmission problem using Galerkin BEM.
@@ -57,8 +58,7 @@ public:
      * @param c_i refraction indef of inner domain (must not be smaller than c_o)
      * @param T complex matrix to which the solutions operator matrix will be stored
      */
-    void gen_sol_op(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
-                    Eigen::MatrixXcd &T);
+    void gen_sol_op(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i, Eigen::MatrixXcd &T);
     /**
      * Compute approximation of solutions operator and its 1st derivative
      * for second-kind direct BIEs of Helmholtz transmission problem using Galerkin BEM.
@@ -114,8 +114,15 @@ public:
     /**
      * Return reference to the mass matrix.
      */
-    const Eigen::MatrixXd &mass_matrix() const { return M; };
+    const Eigen::MatrixXd &mass_matrix() const { return M; }
+    const Eigen::MatrixXcd &K_int() const { return K_i; }
+    const Eigen::MatrixXcd &K_ext() const { return K_o; }
+    const Eigen::MatrixXcd &V_int() const { return V_i; }
+    const Eigen::MatrixXcd &V_ext() const { return V_o; }
+    const Eigen::MatrixXcd &W_int() const { return W_i; }
+    const Eigen::MatrixXcd &W_ext() const { return W_o; }
     Eigen::MatrixXcd projection(const Eigen::MatrixXcd &T) const;
+    const BuilderData &getBuilderData() const { return builder_data; }
 };
 
 #endif //GEN_SOL_OPHPP

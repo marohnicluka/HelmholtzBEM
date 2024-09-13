@@ -37,6 +37,7 @@
 #include "find_roots.hpp"
 #include "gen_sol_op.hpp"
 #include "continuous_space.hpp"
+#include "randsvd.hpp"
 
 // define shorthand for time benchmarking tools, complex data type and immaginary unit
 using namespace std::chrono;
@@ -61,8 +62,8 @@ int main(int argc, char** argv){
     unsigned n_points_y = 1;
     unsigned numpanels;
     numpanels = atoi(argv[6]);
-    double h_x = 100.0/n_points_x;
-    double h_y = 100.0/n_points_y;
+    double h_x = 10.0/n_points_x;
+    double h_y = 10.0/n_points_y;
     // compute mesh for numpanels
     using PanelVector = PanelVector;
     // corner points for the square
@@ -121,6 +122,10 @@ int main(int argc, char** argv){
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
     SolutionsOperator so(builder_data);
+    GalerkinBuilder builder(builder_data);
+    int nc = 4, nr = 2 * mesh.getNumPanels();
+    auto W = randomized_svd::randGaussian(nr, nc);
+    unsigned q = 5;
 
     // loop over values of wavenumber 
     for (unsigned j = 0; j < n_points_x; j++) {
@@ -142,28 +147,28 @@ int main(int argc, char** argv){
             auto sv_eval = [&] (double k_in) {
                 auto start = high_resolution_clock::now();
                 Eigen::MatrixXcd T_in;
-                so.gen_sol_op(k_in, c_o, c_i, T_in);
+                so.gen_sol_op(builder, k_in, c_o, c_i, T_in);
                 auto end = high_resolution_clock::now();
                 duration_ops += duration_cast<milliseconds>(end-start);
-                return direct::sv(T_in, list, count)(m);
+                return randomized_svd::sv(T_in, W, q);
             };
             auto sv_eval_both = [&] (double k_in) {
                 auto start = high_resolution_clock::now();
                 Eigen::MatrixXcd T_in, T_der_in, T_der2_in;
-                so.gen_sol_op_2nd_der(k_in, c_o, c_i, T_in, T_der_in, T_der2_in);
-                Eigen::MatrixXd res = direct::sv_2nd_der(T_in, T_der_in, T_der2_in, list, count).block(m,1,1,2);
+                so.gen_sol_op_2nd_der(builder, k_in, c_o, c_i, T_in, T_der_in, T_der2_in);
+                auto res = randomized_svd::sv_der2(T_in, T_der_in, T_der2_in, W, q);
                 auto end = high_resolution_clock::now();
                 duration_ops += duration_cast<milliseconds>(end-start);
-                return res;
+                return res.tail(2);
             };
             auto sv_eval_der = [&] (double k_in) {
                 auto start = high_resolution_clock::now();
                 Eigen::MatrixXcd T_in, T_der_in;
-                so.gen_sol_op_1st_der(k_in, c_o, c_i, T_in, T_der_in);
-                double res = direct::sv_1st_der(T_in, T_der_in, list, count)(m,1);
+                so.gen_sol_op_1st_der(builder, k_in, c_o, c_i, T_in, T_der_in);
+                auto res = randomized_svd::sv_der(T_in, T_der_in, W, q);
                 auto end = high_resolution_clock::now();
                 duration_ops += duration_cast<milliseconds>(end-start);
-                return res;
+                return res(1);
             };
 
             bool root_found = false;
@@ -181,7 +186,7 @@ int main(int argc, char** argv){
 			#ifdef CMDL
 			// write interval searched to command line
             std::cout << "Interval searched: [" << k_temp.real() 
-	    	<< "," << k_temp.real()+h_x << "]" << std::endl;
+	    	<< "," << k_temp.real()+h_x << "], time: " << 1e-3 * duration_cast<milliseconds>(end - start).count() << std::endl;
 			#endif
 
             // write result to file

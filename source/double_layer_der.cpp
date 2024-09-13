@@ -61,8 +61,8 @@
                         // Normalizing the normal vector
                         normal = normal / normal.norm();
                         if ( abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon ) { // Away from singularity
-                            result = (complex_bessel::H1p(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm())*(pi[s]-pi_p[t]).norm()*k*sqrt(c)
-                                         + complex_bessel::H1(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm()))
+                            result = (complex_bessel::HankelH1p(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm())*(pi[s]-pi_p[t]).norm()*k*sqrt(c)
+                                         + complex_bessel::HankelH1(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm()))
                                      *(pi[s]-pi_p[t]).normalized().dot(normal);
                             //std::cout << complex_bessel::H1p(1,k*sqrt(c)*(pi[s]-pi[t]).norm()) << std::endl;
                         }
@@ -135,14 +135,14 @@
                         normal = normal / normal.norm();
                         if (swap) {
                             if ( abs(k*sqrt(c))*(pi[s]-pi_p.swapped_op(t)).norm() > epsilon ) { // Away from singularity
-                                result = (complex_bessel::H1p(1,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm())*(pi[s]-pi_p.swapped_op(t)).norm()*k*sqrt(c)
-                                             +complex_bessel::H1(1,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm()))
+                                result = (complex_bessel::HankelH1p(1,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm())*(pi[s]-pi_p.swapped_op(t)).norm()*k*sqrt(c)
+                                             +complex_bessel::HankelH1(1,k*sqrt(c)*(pi[s]-pi_p.swapped_op(t)).norm()))
                                          *(pi[s]-pi_p.swapped_op(t)).normalized().dot(normal);
                             }
                         } else {
                             if ( abs(k*sqrt(c))*(pi.swapped_op(s)-pi_p[t]).norm() > epsilon ) { // Away from singularity
-                                result = (complex_bessel::H1p(1,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm())*(pi.swapped_op(s)-pi_p[t]).norm()*k*sqrt(c)
-                                             +complex_bessel::H1(1,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm()))
+                                result = (complex_bessel::HankelH1p(1,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm())*(pi.swapped_op(s)-pi_p[t]).norm()*k*sqrt(c)
+                                             +complex_bessel::HankelH1(1,k*sqrt(c)*(pi.swapped_op(s)-pi_p[t]).norm()))
                                          *(pi.swapped_op(s)-pi_p[t]).normalized().dot(normal);
                             }
                         }
@@ -205,8 +205,8 @@
                         // Normalizing the normal vector
                         normal = normal / normal.norm();
                         if ( abs(k*sqrt(c))*(pi[s]-pi_p[t]).norm() > epsilon ) { // Away from singularity
-                            result = (complex_bessel::H1p(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm())*(pi[s]-pi_p[t]).norm()*k*sqrt(c)
-                                        +complex_bessel::H1(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm()))
+                            result = (complex_bessel::HankelH1p(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm())*(pi[s]-pi_p[t]).norm()*k*sqrt(c)
+                                        +complex_bessel::HankelH1(1,k*sqrt(c)*(pi[s]-pi_p[t]).norm()))
                                                 *(pi[s]-pi_p[t]).normalized().dot(normal);
                         }
                         return result*F(t)*G(s);
@@ -255,14 +255,12 @@
                     Eigen::MatrixXcd interaction_matrix = InteractionMatrix(
                             *panels[i], *panels[j], trial_space, test_space, GaussQR, CGaussQR, k,c);
                     // Local to global mapping of the elements in interaction matrix
-                    for (unsigned int I = 0; I < Qtest; ++I) {
-                        for (unsigned int J = 0; J < Qtrial; ++J) {
-                            //int II = test_space.LocGlobMap(I + 1, i + 1, numpanels) - 1;
-                            //int JJ = trial_space.LocGlobMap(J + 1, j + 1, numpanels) - 1;
-                            int II = test_space.LocGlobMap(I + 1, i + 1, numpanels) - 1;
-                            int JJ = trial_space.LocGlobMap(J + 1, j + 1, numpanels) - 1;
+                    for (unsigned int ii = 0; ii < Qtest; ++ii) {
+                        for (unsigned int jj = 0; jj < Qtrial; ++jj) {
+                            int II = test_space.LocGlobMap(ii + 1, i + 1, numpanels) - 1;
+                            int JJ = trial_space.LocGlobMap(jj + 1, j + 1, numpanels) - 1;
                             // Filling the Galerkin matrix entries
-                            output(II, JJ) += interaction_matrix(I, J);
+                            output(II, JJ) += interaction_matrix(ii, jj);
                         }
                     }
                 }

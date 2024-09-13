@@ -36,6 +36,7 @@ namespace randomized_svd {
     * @param nc number of columns
     */
     Eigen::MatrixXcd randGaussian(int nr, int nc);
+    Eigen::VectorXcd randGaussian(int n);
 
     /**
      * This function returns an approximation of the smallest singular value

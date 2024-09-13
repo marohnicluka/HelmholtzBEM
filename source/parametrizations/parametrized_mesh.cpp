@@ -20,10 +20,10 @@ ParametrizedMesh::ParametrizedMesh(PanelVector panels) : panels_(panels) {
   for (unsigned int i = 0; i < N; ++i) {
     c_sums_[i] = (i > 0 ? c_sums_[i - 1] : 0.) + panels[i]->length();
     if ((panels[0]->operator()(-1.) - panels[i]->operator()(1.)).norm() <
-        10*std::numeric_limits<double>::epsilon()) {
+      10*std::numeric_limits<double>::epsilon()) {
       // std::cout << "Break in continuity at position "<< i << std::endl;
       split_ = (i + 1) % N;
-    }
+      }
   }
   // std::cout << "split : " << split_ << std::endl;
 }
@@ -39,7 +39,7 @@ unsigned int ParametrizedMesh::getNumPanels() const {
 }
 
 Eigen::Vector2d ParametrizedMesh::getVertex(unsigned int i) const {
-  assert(i < getNumPanels()); // Asserting requested index is within limits
+  assert(i < getNumPanels());                               // Asserting requested index is within limits
   return panels_[i]->operator()(-1);
 }
 
@@ -64,3 +64,12 @@ double ParametrizedMesh::maxPanelLength() const {
   }
   return ret;
 }
+
+bool ParametrizedMesh::isPolygonal() const {
+  for (const auto &p : panels_) {
+    if (!p->isLineSegment())
+      return false;
+  }
+  return true;
+}
+

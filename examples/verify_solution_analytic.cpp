@@ -3,7 +3,7 @@
  * \brief This target builds a script that solves the
  * Helmholtz transmission problem in a circle with BesselJ
  * incoming wave and compares the result with the analytic
- * solution.
+ * solution in the square [(-1,-1),(1,1)].
  * The script can be run as follows:
  *
  * <tt>
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     ParametrizedMesh mesh(panels);
 
     // generate output filename with set parameters
-    std::string base_name = "file_verify_solution_analytic_";
+    std::string base_name = "file_verify_solution_analytic_error_";
     std::string suffix = ".dat";
     std::string sep = "_";
     std::string fname = base_name;
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 
     Eigen::ArrayXXd grid_X, grid_Y;
     Eigen::Vector2d lower_left_corner(-1., -1.), upper_right_corner(1., 1.);
-    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
+    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 11, order, k, c_o, c_i,
                                                                     lower_left_corner, upper_right_corner, grid_size, grid_size,
                                                                     grid_X, grid_Y, false);
 
@@ -120,21 +120,21 @@ int main(int argc, char** argv) {
     double step_x = (upper_right_corner(0) - lower_left_corner(0)) / (grid_size - 1.);
     double step_y = (upper_right_corner(1) - lower_left_corner(1)) / (grid_size - 1.);
     Eigen::ArrayXXcd S_a(grid_size, grid_size);
-    for (unsigned I = 0; I < grid_size; ++I) {
-        for (unsigned J = 0; J < grid_size; ++J) {
+    for (unsigned ii = 0; ii < grid_size; ++ii) {
+        for (unsigned jj = 0; jj < grid_size; ++jj) {
             Eigen::Vector2d x;
-            x << lower_left_corner(0) + I * step_x, lower_left_corner(1) + J * step_y;
+            x << lower_left_corner(0) + ii * step_x, lower_left_corner(1) + jj * step_y;
             double r = x.norm();
-            int pos = r < radius ? 1 : -1;
-            S_a(I, J) = pos == 1 ? sol::u_t(x(0), x(1), bessel_order, radius, a_n, k, c_i)
-                                 : sol::u_s(x(0), x(1), bessel_order, radius, a_n, k, c_i);
+            S_a(ii, jj) = r <= radius ? sol::u_t(x(0), x(1), bessel_order, radius, a_n, k, c_i)
+                                      : sol::u_s(x(0), x(1), bessel_order, radius, a_n, k, c_i);
         }
     }
 
+    Eigen::ArrayXXd err = (S - S_a).cwiseAbs();
     double sol_err = (S - S_a).matrix().norm() / S_a.matrix().norm();
 #ifdef CMDL
-    std::cout << "Solution error: " << sol_err << std::endl;
-    std::cout << "Max relative error: " << ((S - S_a).array().cwiseAbs() / S_a.array().cwiseAbs()).matrix().maxCoeff() << std::endl;
+    std::cout << "Solution error: " << sol_err << ", " << (err / S_a.cwiseAbs()).mean() << std::endl;
+    std::cout << "Max relative error: " << (err / S_a.cwiseAbs()).matrix().maxCoeff() << std::endl;
 #endif
 
     //S = (S - S_a).cwiseAbs() / S_a.norm();
@@ -160,14 +160,17 @@ int main(int argc, char** argv) {
         std::cerr << "Error: failed to open plotted data file for writing" << std::endl;
         return 1;
     }
-    for (unsigned I = 0; I < grid_size; ++I) {
-        for (unsigned J = 0; J < grid_size; ++J)
-            file_out << lower_left_corner(0) + I * step_x << '\t' << lower_left_corner(1) + J * step_y << '\t' << S(I, J).real() << std::endl;
+    for (unsigned ii = 0; ii < grid_size; ++ii) {
+        for (unsigned jj = 0; jj < grid_size; ++jj)
+            file_out << lower_left_corner(0) + ii * step_x << '\t' << lower_left_corner(1) + jj * step_y << '\t' << err(ii, jj) << std::endl;
         file_out << std::endl;
     }
     file_out.close();
     //file_script << "set cbrange [" << 0 << ":" << S.real().maxCoeff() << "]" << std::endl;
     file_script << "splot \'img/" << fname << suffix << "\'" << std::endl;
     file_script.close();
+#ifdef COMPUTE_BESSEL_STATS
+    complex_bessel::print_bessel_stats();
+#endif
     return 0;
 }

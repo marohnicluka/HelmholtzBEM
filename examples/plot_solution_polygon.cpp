@@ -190,10 +190,10 @@ int main(int argc, char** argv) {
             std::cerr << "Error: failed to open plotted data file for writing" << std::endl;
             return 1;
         }
-        for (unsigned I = 0; I < grid_size; ++I) {
-            for (unsigned J = 0; J < grid_size; ++J)
-                file_out << grid_X(I, J) << '\t' << grid_Y(I, J) << '\t'
-                         << (mode == 2 ? std::abs(S(I, J)) : (S(I, J) * (animate ? exp(-ii * 0.08 * M_PI * double(count)) : 1.)).real())
+        for (unsigned ii = 0; ii < grid_size; ++ii) {
+            for (unsigned jj = 0; jj < grid_size; ++jj)
+                file_out << grid_X(ii, jj) << '\t' << grid_Y(ii, jj) << '\t'
+                         << (mode == 2 ? std::abs(S(ii, jj)) : (S(ii, jj) * (animate ? exp(-ii * 0.08 * M_PI * double(count)) : 1.)).real())
                          << std::endl;
             file_out << std::endl;
         }

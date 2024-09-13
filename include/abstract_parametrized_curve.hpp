@@ -199,6 +199,11 @@ public:
     }
     return length;
   }
+
+  /**
+   * This function returns true iff the curve is a line segment.
+   */
+  virtual bool isLineSegment() const = 0;
 }; // class AbstractParametrizedCurve
 
 /**

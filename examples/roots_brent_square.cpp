@@ -119,6 +119,8 @@ int main(int argc, char** argv) {
     std::cout << std::endl;
 	#endif
 
+    auto tic = high_resolution_clock::now();
+
     ContinuousSpace<1> cont_space;
     BuilderData builder_data(mesh, cont_space, cont_space, order);
     SolutionsOperator so(builder_data);
@@ -205,6 +207,8 @@ int main(int argc, char** argv) {
 			#endif
         }
     }
+    auto toc = high_resolution_clock::now();
+    std::cout << "Total time: " << 1e-3 * duration_cast<milliseconds>(toc - tic).count() << std::endl;
     return 0;
 }
 

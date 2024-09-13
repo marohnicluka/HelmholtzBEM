@@ -35,6 +35,16 @@ namespace scatterer {
     bool read_polygon(const std::string& fname, Eigen::VectorXd& x, Eigen::VectorXd& y, double scale = 1.0);
 
     /**
+    * This function computes the polygon length
+    * from its vertices (x,y).
+    *
+    * @param x x-coordinates of vertices
+    * @param y y-coordinates of vertices
+    * @return the length of the polygon
+    */
+    double length(const Eigen::VectorXd& x, const Eigen::VectorXd& y);
+
+    /**
     * This function computes the number of
     * panels automatically by setting panel
     * length to approximately f times the

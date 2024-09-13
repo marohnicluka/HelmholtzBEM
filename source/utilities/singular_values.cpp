@@ -165,6 +165,6 @@ namespace direct {
             if (errest < rtol * std::abs(y[0]) || errest < atol)
                 break;
         }
-        return y[0]; // Return value extrapolated from largest number ofdifference quotients
+        return y[0]; // Return value extrapolated from largest number of difference quotients
     }
 }

@@ -69,13 +69,13 @@ int main() {
                 mesh, fund_sol_dir, order, k);
         // compute interpolation coefficients of known solution Neumann data in FEM-sapce
         Eigen::VectorXcd res_known = discont_space.Interpolate_helmholtz(fund_sol_neu,mesh);
+        unsigned N = 20;
+        QuadRule GaussQR = getGaussQR(N,0.,1.);
         // compute mass matrix for projection onto orthonormal basis functions
-        Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh, discont_space, discont_space, getGaussQR(order, 0., 1.));
+        Eigen::MatrixXcd M = mass_matrix::GalerkinMatrix(mesh, discont_space, discont_space, GaussQR);
 
         // setup mesh and QR for computing residuals
         const PanelVector &panels_coarse = mesh.getPanels();
-        unsigned N = 20;
-        QuadRule GaussQR = getGaussQR(N,0.,1.);
 
         // compute residual w.r.t. computed and exact solution
         complex_t res_val = 0.0;

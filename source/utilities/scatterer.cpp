@@ -75,6 +75,17 @@ namespace scatterer {
         return true;
     }
 
+    double length(const Eigen::VectorXd &x, const Eigen::VectorXd &y) {
+        int n = x.size();
+        double L = 0.;
+        Eigen::Vector2d v;
+        for (int i = 0; i < n; ++i) {
+            v << x((i + 1) % n) - x(i), y((i + 1) % n) - y(i);
+            L += v.norm();
+        }
+        return L;
+    }
+
     unsigned int auto_num_panels(const Eigen::VectorXd& x, const Eigen::VectorXd& y, double f) {
         size_t n = x.size(), i;
         if (n == 0)

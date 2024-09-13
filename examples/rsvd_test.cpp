@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <string>
 #include <thread>
+#include <sstream>
 #include "parametrized_line.hpp"
 #include "singular_values_arnoldi.hpp"
 #include "find_roots.hpp"
@@ -24,6 +25,8 @@
 #include "randsvd.hpp"
 #include "find_roots.hpp"
 #include "continuous_space.hpp"
+#include "solvers.hpp"
+#include "incoming.hpp"
 
 // define shorthand for time benchmarking tools, complex data type and immaginary unit
 using namespace std::chrono;
@@ -35,9 +38,9 @@ using namespace std::chrono;
 int main(int argc, char** argv) {
 
     // check whether we have the correct number of input arguments
-    if (argc < 10)
+    if (argc < 11)
         throw std::runtime_error("Too few input arguments!");
-    if (argc > 10)
+    if (argc > 11)
         throw std::runtime_error("Too many input arguments!");
 
     // define radius of circle refraction index and initial wavenumber
@@ -89,6 +92,14 @@ int main(int argc, char** argv) {
 
     // define the number of subspace iterations
     int q = atoi(argv[9]);
+    string fname_incoming = argv[10];
+    // read incoming wave from file
+    incoming::wave u_inc_spec;
+    if (!incoming::load(fname_incoming, u_inc_spec)) {
+        std::cerr << "Error: failed to read incoming wave from file" << std::endl;
+        return 1;
+    }
+
 
     std::string mfile = "../data/rsvd_test.m";
     std::ofstream file_out;
@@ -99,7 +110,7 @@ int main(int argc, char** argv) {
     int nr = 2 * numpanels;
     Eigen::MatrixXcd W = randomized_svd::randGaussian(nr, nc);
 
-    double k_max = k_min + 1., k_step = (k_max - k_min) / (n_points_k - 1.);
+    double k_max = k_min + 9.0, k_step = (k_max - k_min) / (n_points_k - 1.);
 
     std::vector<size_t> ind(n_points_k);
     std::vector<double> rsv(n_points_k), asv(n_points_k);
@@ -124,27 +135,66 @@ int main(int argc, char** argv) {
     auto policy = std::execution::seq;
     unsigned n_threads = 1;
     GalerkinBuilder builder(builder_data);
+    randomized_svd::benchmarking(true);
 #endif
     unsigned n_batches = n_points_k / n_threads;
 
-    auto tic_all = high_resolution_clock::now();
+    std::string fname = "../data/A";
+    std::ofstream file_A, file_rhs;
+    file_A.open(fname, std::ofstream::out | std::ofstream::trunc);
+    file_A.close();
+    file_A.open(fname, std::ios_base::app);
+    file_A << std::setprecision(6);
+    std::string fname2 = "../data/rhs";
+    file_rhs.open(fname2, std::ofstream::out | std::ofstream::trunc);
+    file_rhs.close();
+    file_rhs.open(fname2, std::ios_base::app);
+    file_rhs << std::setprecision(6);
+
+        auto tic_all = high_resolution_clock::now();
     for (unsigned ib = 0; ib < n_batches; ++ib) {
         unsigned bstart = ib * n_threads, bsize = ib < n_batches - 1 ? n_threads : n_points_k - bstart;
         auto start = ind.cbegin() + bstart;
         auto end = ib < n_batches - 1 ? ind.cbegin() + (ib + 1) * n_threads : ind.cend();
-        Eigen::MatrixXcd Tall(nr, nr * bsize);
+        std::vector<Eigen::MatrixXcd> Tall(bsize);
 #ifdef CMDL
         std::cout << std::endl << "Processing batch " << ib + 1 << " of " << n_batches << "..." << std::endl;
 #endif
         auto tic = high_resolution_clock::now();
         std::for_each(policy, start, end, [&](size_t i) {
-            Eigen::MatrixXcd T_in;
+            double k = k_min + k_step * i;
+            Eigen::MatrixXcd A;
+            Eigen::VectorXcd rhs;
+            // create the incoming wave function and its gradient
+            auto u_inc = [&](double x1, double x2) {
+                return incoming::compute(u_inc_spec, Eigen::Vector2d(x1, x2), k);
+            };
+            auto u_inc_del = [&](double x1, double x2) {
+                return incoming::compute_del(u_inc_spec, Eigen::Vector2d(x1, x2), k);
+            };
+            tp::direct_second_kind::A_rhs(mesh, u_inc, u_inc_del, k, c_o, c_i, so, A, rhs);
+            for (unsigned I = 0; I < A.rows(); ++I) {
+                for (unsigned J = 0; J < A.cols(); ++J) {
+                    file_A << "(" << A(I,J).real() << (A(I,J).imag()>=0?"+":"") << A(I,J).imag() << "j)";
+                    if (J+1<A.cols())
+                        file_A << " ";
+                }
+                if (I+1<A.rows())
+                    file_A << std::endl;
+            }
+            file_A << "," << std::endl;
+            for (unsigned I = 0; I < rhs.size(); ++I) {
+                file_rhs << "(" << rhs(I).real() << (rhs(I).imag()>=0?"+":"") << rhs(I).imag() << "j)";
+                if (I+1<rhs.size())
+                    file_rhs << " ";
+            }
+            file_rhs << std::endl;
+            Eigen::MatrixXcd &T_in = Tall[i - bstart];
 #ifdef WITH_MULTIPLE_THREADS
-            so.gen_sol_op(k_min + k_step * i, c_o, c_i, T_in);
+            so.gen_sol_op(k, c_o, c_i, T_in);
 #else
-            so.gen_sol_op(builder, k_min + k_step * i, c_o, c_i, T_in);
+            so.gen_sol_op(builder, k, c_o, c_i, T_in);
 #endif
-            Tall.block(0, (i - bstart) * nr, nr, nr) = T_in;
         });
         auto toc = high_resolution_clock::now();
         auto dur_assembly = duration_cast<milliseconds>(toc - tic);
@@ -152,7 +202,7 @@ int main(int argc, char** argv) {
         tic = high_resolution_clock::now();
 #ifdef COMPUTE_ARNOLDI
         std::for_each(start, end, [&](size_t i) {
-            const Eigen::MatrixXcd &T = Tall.block(0, (i - bstart) * nr, nr, nr);
+            const Eigen::MatrixXcd &T = Tall[i - bstart];
             asv[i] = arnoldi::sv(T, 1, acc)(0);
         });
 #endif
@@ -162,7 +212,7 @@ int main(int argc, char** argv) {
         tic = high_resolution_clock::now();
 #ifdef COMPUTE_RSVD
         std::for_each(policy, start, end, [&](size_t i) {
-            const Eigen::MatrixXcd &T = Tall.block(0, (i - bstart) * nr, nr, nr);
+            const Eigen::MatrixXcd &T = Tall[i - bstart];
             rsv[i] = randomized_svd::sv(T, W, q);
         });
 #endif
@@ -176,6 +226,8 @@ int main(int argc, char** argv) {
                   << 1e-3 * dur_rsv.count() << std::endl;
 #endif
     }
+    file_A.close();
+    file_rhs.close();
     auto toc_all = high_resolution_clock::now();
     auto dur_all = duration_cast<milliseconds>(toc_all - tic_all);
 #ifdef CMDL
@@ -201,7 +253,8 @@ int main(int argc, char** argv) {
               << "Subspace iterations time: " << randomized_svd::get_sub_iter_time() << std::endl
               << "SVD time: " << randomized_svd::get_svd_time() << std::endl
               << "Interaction matrix assembly time: " << builder.getInteractionMatrixAssemblyTime() * 1e-6 << std::endl
-              << "Hankel computation time: " << builder.getHankelComputationTime() * 1e-6 << std::endl;
+              << "Hankel computation time: " << builder.getHankelComputationTime() * 1e-6 << std::endl
+              << "Panel interaction data time: " << builder.getPanelInteractionDataTime() * 1e-6 << std::endl;
 #endif
 
     file_out.open(mfile, std::ios_base::app);
@@ -237,5 +290,6 @@ int main(int argc, char** argv) {
     file_out << "];" << std::endl;
     file_out.close();
 
+    complex_bessel::print_bessel_stats();
     return 0;
 }

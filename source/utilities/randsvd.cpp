@@ -10,18 +10,15 @@
  * (c) 2023 Luka Marohnić
  */
 
-//#define USE_LAPACK_ZGESVD 1
-
 #include "randsvd.hpp"
-#ifdef USE_LAPACK_ZGESVD
-#include <lapack.h>
-#include <complex.h>
-#else
 #include <complex>
-#endif
 #include <random>
 #include <iostream>
 #include <chrono>
+#if 0
+#include "lapacke.h"
+#include "complex.h"
+#endif
 
 using namespace std::chrono;
 
@@ -53,11 +50,50 @@ namespace randomized_svd {
         std::random_device rd {};
         std::mt19937 gen { rd() };
         std::uniform_real_distribution<> d { 0, 1 };
-        Eigen::MatrixXcd R = Eigen::MatrixXcd::Zero(nr, nc);
+        Eigen::MatrixXcd R(nr, nc);
         for (int i = 0; i < nr; ++i) for (int j = 0; j < nc; ++j) {
             R(i, j) = std::complex<double>(d(gen), d(gen));
         }
         return R * M_SQRT1_2;
+    }
+
+    Eigen::VectorXcd randGaussian(int n) {
+        std::random_device rd {};
+        std::mt19937 gen { rd() };
+        std::uniform_real_distribution<> d { 0, 1 };
+        Eigen::VectorXcd R(n);
+        for (int i = 0; i < n; ++i) {
+            R(i) = std::complex<double>(d(gen), d(gen));
+        }
+        return R;
+    }
+
+    Eigen::VectorXcd biCGSTAB(const Eigen::MatrixXcd &A, const Eigen::VectorXcd &b, double acc = 1e-6) {
+        size_t n = b.rows();
+        Eigen::VectorXcd v(n), x(n), t(n), s(n);
+        x.setZero();
+        Eigen::VectorXcd r = b - A * x, p = r, r0 = randGaussian(n);
+        std::complex<double> alpha, omega, rho0 = r0.dot(r), rho1, beta;
+        size_t i = 0;
+        for (; i < 1000; ++i) {
+            v = A * p;
+            alpha = rho0 / r0.dot(v);
+            x += alpha * p;
+            s = r - alpha * v;
+            if (s.norm() < acc)
+                break;
+            t = A * s;
+            omega = t.dot(s) / t.dot(t);
+            x += omega * s;
+            r = s - omega * t;
+            if (r.norm() < acc)
+                break;
+            rho1 = r0.dot(r);
+            beta = rho1 / rho0 * alpha / omega;
+            p = r + beta * (p - omega * v);
+            rho0 = rho1;
+        }
+        return x;
     }
 
     double sv(const Eigen::MatrixXcd &T, const Eigen::MatrixXcd &R, int q) {
@@ -84,7 +120,7 @@ namespace randomized_svd {
             sub_iter_time += duration_cast<milliseconds>(toc - tic).count();
         tic = high_resolution_clock::now();
         double res;
-#ifdef USE_LAPACK_ZGESVD
+#if 0
         Q = lu_adjoint.solve(Q);
         char none = 'N';
         double *svd = new double[nr], *rwork = new double[5 * nr];
@@ -164,7 +200,7 @@ namespace randomized_svd {
         u /= u.coeff(m - 1);
         W.col(m - 1) = -u;
         // solve linear system of equations for derivative of eigenvalue and eigenvector
-        Eigen::PartialPivLU<Eigen::MatrixXcd> lu_B(W);
+        Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXcd> > lu_B(W);
         p.head(N) = T_der * u.tail(N);
         p.tail(N) = T_der.adjoint() * u.head(N);
         Eigen::VectorXcd u_der = -lu_B.solve(p), p2(2 * N);

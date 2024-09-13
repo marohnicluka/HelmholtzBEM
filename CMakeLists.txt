@@ -36,20 +36,22 @@ if (CMDL)
 endif()
 unset(CMDL CACHE)
 
-
 # COMPILATION FLAGS
 ###########################################################################
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-O3 -march=native -mtune=native -mavx2 -mfma -msse2 -DNDEBUG")
+#set(CMAKE_CXX_COMPILER_ID Clang)
+set(CMAKE_CXX_FLAGS "-O3 -march=native -mtune=native -DNDEBUG -mavx2 -mfma -g")
 
 # IGNORE WARNINGS
 ###########################################################################
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    message(STATUS "Using Clang compiler")
     add_definitions(-Wno-deprecated-register -Wno-return-type-c-linkage -Wno-keyword-macro -Wno-missing-braces)
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+    message(STATUS "Using GNU compiler")
     add_definitions(-Wno-deprecated-declarations -Wno-ignored-attributes -Wno-misleading-indentation -Wno-unknown-pragmas)
 endif()
 

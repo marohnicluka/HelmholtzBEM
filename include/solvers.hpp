@@ -11,7 +11,7 @@
 #define SOLVERSHPP
 
 #include "parametrized_mesh.hpp"
-#include "galerkin_builder.hpp"
+#include "gen_sol_op.hpp"
 /**
  * \namespace bvp
  * \brief This namespace contains solvers for boundary value problems.
@@ -78,6 +78,16 @@ namespace tp {
             PairInc(T first, T second, T first_max): std::pair<T,T>(first, second) { _m=first_max; }
             PairInc& operator++() { if (this->first+1==_m) { ++this->second; this->first=0; } else ++this->first; return *this; }
         };
+
+        void A_rhs(const ParametrizedMesh &mesh,
+                   const std::function<std::complex<double>(double, double)> u_inc,
+                   const std::function<Eigen::Vector2cd (double, double)> u_inc_del,
+                   const std::complex<double> &k,
+                   const double c_o,
+                   const double c_i,
+                   SolutionsOperator &sol_op,
+                   Eigen::MatrixXcd &A,
+                   Eigen::VectorXcd &rhs);
 
         /**
          * This function returns the solution to the Helmholtz transmission problem
@@ -167,7 +177,7 @@ namespace tp {
          * @param grid_X x-coordinates of grid points
          * @param grid_Y y-coordinates of grid points
          * @param total_field whether to add the incoming wave to the scattered wave
-         * @param builder Galerkin matrix builder
+         * @param sol_op solutions operator
          * @param so solutions operator matrix
          * @return the resulting wave in the specified rectangle
          */
@@ -185,7 +195,7 @@ namespace tp {
                                Eigen::ArrayXXd &grid_X,
                                Eigen::ArrayXXd &grid_Y,
                                bool total_field,
-                               GalerkinBuilder &builder,
+                               SolutionsOperator &sol_op,
                                Eigen::MatrixXcd &so);
     } // namespace direct_second_kind
 } // namespace tp

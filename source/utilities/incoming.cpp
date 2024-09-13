@@ -159,7 +159,7 @@ namespace incoming {
         auto p = x - x0;
         double r = p.norm();
         double theta = atan2(p(1) / r, p(0) / r);
-        return complex_bessel::J(l, k*r) * exp(ii * double(l) * theta);
+        return complex_bessel::BesselJ(l, k*r) * exp(ii * double(l) * theta);
     }
 
     Eigen::Vector2cd circular_J_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
@@ -168,7 +168,7 @@ namespace incoming {
         complex_t a = k * r;
         double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
-        complex_t jl = complex_bessel::J(l, a), jlp = complex_bessel::J(l-1, a), jln = complex_bessel::J(l+1, a);
+        complex_t jl = complex_bessel::BesselJ(l, a), jlp = complex_bessel::BesselJ(l-1, a), jln = complex_bessel::BesselJ(l+1, a);
         complex_t dfdr = k * (jlp - jln) / 2., dfdt = jl * il;
         Eigen::Vector2cd res;
         res << dfdr * c - dfdt * s / r, dfdr * s + dfdt * c / r;
@@ -179,7 +179,7 @@ namespace incoming {
         auto p = x - x0;
         double r = p.norm();
         double theta = atan2(p(1) / r, p(0) / r);
-        return complex_bessel::Y(l, k*r) * exp(ii * double(l) * theta);
+        return complex_bessel::BesselY(l, k*r) * exp(ii * double(l) * theta);
     }
 
     Eigen::Vector2cd circular_Y_del(const Eigen::Vector2d& x, const Eigen::Vector2d &x0, int l, const complex_t &k) {
@@ -188,7 +188,7 @@ namespace incoming {
         complex_t a = k * r;
         double theta = atan2(p(1) / r, p(0) / r), s = sin(theta), c = cos(theta);
         complex_t il = ii * double(l);
-        complex_t yl = complex_bessel::Y(l, a), ylp = complex_bessel::Y(l-1, a), yln = complex_bessel::Y(l+1, a);
+        complex_t yl = complex_bessel::BesselY(l, a), ylp = complex_bessel::BesselY(l-1, a), yln = complex_bessel::BesselY(l+1, a);
         complex_t dfdr = k * (ylp - yln) / 2., dfdt = yl * il;
         Eigen::Vector2cd res;
         res << dfdr * c - dfdt / r * s, dfdr * s + dfdt / r * c;
