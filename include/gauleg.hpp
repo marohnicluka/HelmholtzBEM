@@ -121,6 +121,26 @@ inline std::pair<Eigen::RowVectorXd, Eigen::RowVectorXd>
 }
 
 /**
+ * This functions transplants Gaussian quadrature rule
+ * according to the paper "New quadrature formulas from
+ * conformal maps" by Hale and Trefethen (2008).
+ *
+ * @param qr quadrature rule
+ */
+inline void transplantGaussQR(QuadRule &qr, double a, double b) {
+  qr.x = (2. * (qr.x.array() - a) / (b - a) - 1.).matrix();
+  for (size_t i = 0; i < qr.n; ++i) {
+    double x = qr.x(i), x2 = x * x;
+    double w = qr.w(i), w2 = w * w;
+    qr.x(i) *= (((1225 * x2 + 1800) * x2 + 3024) * x2 + 6720) * x2 + 40320;
+    qr.w(i) *= (((11025 * w2 + 12600) * w2 + 15120) * w2 + 20160) * w2 + 40320;
+  }
+  qr.x /= 53089.;
+  qr.x = (a + (qr.x.array() + 1.) * (b - a) * .5).matrix();
+  qr.w /= 53089.;
+}
+
+/**
  * This function is evaluates a standard Gaussian quadrature rule for the domain
  * [a,b] for the given order. The quadrature rule is returned in the form of a
  * QuadRule object
@@ -141,6 +161,7 @@ inline QuadRule getGaussQR(unsigned N, double a, double b) {
   gauss.n = N;
   gauss.x = points;
   gauss.w = weights;
+  //transplantGaussQR(gauss, a, b);
   return gauss;
 }
 
@@ -163,6 +184,7 @@ inline QuadRule getCGaussQR(unsigned N) {
     gauss.n = N*(N+1)/2-1;
     gauss.x = points;
     gauss.w = weights;
+    //transplantGaussQR(gauss, 0., 1.);
     return gauss;
 }
 #endif

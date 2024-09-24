@@ -30,8 +30,7 @@ public:
    * @param phi_start starting polar angle for the arc
    * @param phi_end ending polar angle for the arc
    */
-  ParametrizedCircularArc(Eigen::Vector2d center, double r, double phi_start,
-                          double phi_end);
+  ParametrizedCircularArc(Eigen::Vector2d center, double r, double phi_start, double phi_end);
 
   ParametrizedCircularArc();
 
@@ -75,7 +74,7 @@ public:
    */
   bool isLineSegment() const { return false; }
 
-  //private:
+  private:
   /**
    * Private field for storing the center
    */

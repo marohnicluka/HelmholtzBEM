@@ -270,8 +270,8 @@
                     // Local to global mapping of the elements in interaction matrix
                     for (unsigned int ii = 0; ii < Qtest; ++ii) {
                         for (unsigned int jj = 0; jj < Qtrial; ++jj) {
-                            int II = test_space.LocGlobMap(ii + 1, i + 1, numpanels) - 1;
-                            int JJ = trial_space.LocGlobMap(jj + 1, j + 1, numpanels) - 1;
+                            int II = test_space.LocGlobMap(ii + 1, i + 1, rows) - 1;
+                            int JJ = trial_space.LocGlobMap(jj + 1, j + 1, cols) - 1;
                             // Filling the Galerkin matrix entries
                             output(II, JJ) += interaction_matrix(ii, jj);
                         }

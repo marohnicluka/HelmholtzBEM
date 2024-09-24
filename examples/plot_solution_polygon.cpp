@@ -47,7 +47,7 @@ complex_t ii = complex_t(0,1.);
 int main(int argc, char** argv) {
 
     // check whether we have the correct number of input arguments
-    if (argc < 15) {
+    if (argc < 13) {
         std::cerr << "Error: too few input arguments" << std::endl;
         return 1;
     }
@@ -60,6 +60,9 @@ int main(int argc, char** argv) {
 
     // read filenames for obstacle and incoming wave
     string fname_scatterer = argv[1], fname_incoming = argv[2];
+    bool smooth_scatterer = fname_scatterer.back() == '@';
+    if (smooth_scatterer)
+        fname_scatterer.pop_back();
 
     // define refraction index, wavenumber, order of quadrature and grid size
     double c_i = atof(argv[3]);
@@ -76,14 +79,14 @@ int main(int argc, char** argv) {
     Eigen::Vector2d upper_right_corner(atof(argv[11]), atof(argv[12]));
 
     // drawing mode
-    int mode = atoi(argv[13]);
+    int mode = argc > 13 ? atoi(argv[13]) : 0;
     bool add_u_inc = false;
     if (mode > 2) {
         mode -= 3;
         add_u_inc = true;
     }
     bool animate = mode == 1;
-    double intensity = atof(argv[14]);
+    double intensity = argc > 14 ? atof(argv[14]) : 1.0;
 
     // read incoming wave from file
     incoming::wave u_inc_spec;
@@ -92,25 +95,44 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    // read polygonal scatterer from file
-    Eigen::VectorXd poly_x, poly_y;
-    if (!scatterer::read_polygon(fname_scatterer, poly_x, poly_y)) {
-        std::cerr << "Error: failed to read scatterer from file" << std::endl;
-        return 1;
+    scatterer::SmoothScatterer *sscat = NULL;
+    ParametrizedMesh *mesh;
+    Eigen::VectorXd vertices_x, vertices_y;
+
+    if (smooth_scatterer) {
+#ifdef CMDL
+        std::cout << "Using smooth scatterer" << std::endl;
+#endif
+        sscat = new scatterer::SmoothScatterer(fname_scatterer);
+        unsigned Npanels = atoi(argv[6]);
+        mesh = new ParametrizedMesh(sscat->panelize(Npanels), MESH_TYPE_SMOOTH, static_cast<void*>(sscat));
+        sscat->sample_vertices(std::max(upper_right_corner(0) - lower_left_corner(0), upper_right_corner(1) - lower_left_corner(1)),
+                               250, vertices_x, vertices_y);
+    } else {
+#ifdef CMDL
+        std::cout << "Using polygonal scatterer" << std::endl;
+#endif
+        // read polygonal scatterer from file
+        if (!scatterer::read(fname_scatterer, vertices_x, vertices_y)) {
+            std::cerr << "Error: failed to read scatterer from file" << std::endl;
+            return 1;
+        }
+        // construction of a ParametrizedMesh object from the vector of panels
+        unsigned Npanels;
+        if (strlen(argv[6]) > 1 && argv[6][1] == '.') {
+            double f = atof(argv[6]);
+            Npanels = scatterer::auto_num_panels(vertices_x, vertices_y, f);
+        } else Npanels = atoi(argv[6]);
+        auto panels = scatterer::make_N_polygonal_panels(vertices_x, vertices_y, Npanels);
+        mesh = new ParametrizedMesh(panels, MESH_TYPE_POLYGONAL);
     }
 
-    // construction of a ParametrizedMesh object from the vector of panels
-    unsigned Npanels;
-    if (strlen(argv[6]) > 1 && argv[6][1] == '.') {
-        double f = atof(argv[6]);
-        Npanels = scatterer::auto_num_panels(poly_x, poly_y, f);
-    } else Npanels = atoi(argv[6]);
-    auto mesh = scatterer::panelize(poly_x, poly_y, Npanels, 0.25);
-    for (const auto &p : mesh.getPanels()) {
-        if (p->length() > M_PI / (5. * k.real())) {
 #ifdef CMDL
-            std::cout << "Warning: the number of panels may be too small" << std::endl;
+    scatterer::print_panels_info(mesh->getPanels());
 #endif
+    for (const auto &p : mesh->getPanels()) {
+        if (p->length() > M_PI / (5. * k.real())) {
+            std::cerr << "Warning: the number of panels may be too small" << std::endl;
             break;
         }
     }
@@ -153,7 +175,7 @@ int main(int argc, char** argv) {
     auto tic = high_resolution_clock::now();
 
     Eigen::ArrayXXd grid_X, grid_Y;
-    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
+    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(*mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
                                                                     lower_left_corner, upper_right_corner, grid_size, grid_size,
                                                                     grid_X, grid_Y, add_u_inc);
 
@@ -175,7 +197,7 @@ int main(int argc, char** argv) {
         double cb_max = (mode == 2 ? S.cwiseAbs().maxCoeff() : S.real().maxCoeff()) / intensity;
         file_script << "set cbrange [" << cb_min << ":" << cb_max << "]" << std::endl;
     }
-    unsigned nv = poly_x.size();
+    unsigned nv = vertices_x.size();
     for (unsigned count = 0; count < (animate ? 25 : 1); ++count) {
         stringstream ss;
         ss << fname;
@@ -200,13 +222,16 @@ int main(int argc, char** argv) {
         file_out.close();
         file_script << "set object 1 polygon from ";
         for (unsigned i = 0; i < nv; ++i) {
-            file_script << poly_x(i) << ", " << poly_y(i) << " to ";
+            file_script << vertices_x(i) << ", " << vertices_y(i) << " to ";
         }
-        file_script << poly_x(0) << ", " << poly_y(0) << " lw 0.5 lc rgb \'#000000\' front" << std::endl;
+        file_script << vertices_x(0) << ", " << vertices_y(0) << " lw 0.5 lc rgb \'#000000\' front" << std::endl;
         if (animate)
             file_script << "set output \"img/" << fname_count << ".png\"" << std::endl;
         file_script << "splot \'img/" << fname_count << suffix << "\'" << std::endl;
     }
     file_script.close();
+    delete mesh;
+    if (sscat != NULL)
+        delete sscat;
     return 0;
 }

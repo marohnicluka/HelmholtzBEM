@@ -10,6 +10,7 @@
 #define PARAMETRIZEDPOLYNOMIALHPP
 
 #include "abstract_parametrized_curve.hpp"
+#include "cspline.hpp"
 
 /**
  * \class ParametrizedPolynomial
@@ -26,17 +27,15 @@ public:
   using CoefficientsList = typename Eigen::Matrix<double, 2, Eigen::Dynamic>;
 
   /**
-   * Constructor with a coefficient list type parameter that is Eigen::MatrixXd
-   * with size: 2 X N. Here N-1 is the degree of the polynomial
+   * Constructor.
    *
-   * @param coeffs Coefficient list for the parametrization
+   * @param spline complex spline representing a 2D curve
    * @param tmin Lower end of the actual parameter interval used which is
    *             linearly mapped to the standard interval
    * @param tmax Upper end of the actual parameter interval used which is
    *             linearly mapped to the standard interval
    */
-  ParametrizedPolynomial(CoefficientsList coeffs, double tmin = -1.,
-                         double tmax = 1.);
+  ParametrizedPolynomial(const ComplexSpline &spline, double tmin, double tmax, double len);
 
   /**
    * See documentation in AbstractParametrizedCurve
@@ -71,14 +70,16 @@ public:
   /**
    * See documentation in AbstractParametrizedCurve
    */
-  bool isLineSegment() const { return false; } // the degree is guaranteed to be larger than one
+  double length();
+
+  /**
+   * See documentation in AbstractParametrizedCurve
+   */
+  bool isLineSegment() const { return false; }
 
 private:
-  /**
-   * List of coefficients for the polynomial parametrization
-   */
-  const CoefficientsList coeffs_;
-
+  const ComplexSpline &spline_;
+  double length_;
   /**
    * Storing the actual range of parameter within the parameter range
    * By default, it is exactly equal to the parameter range. It is used

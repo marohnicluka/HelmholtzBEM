@@ -11,6 +11,12 @@
 
 #include "abstract_parametrized_curve.hpp"
 
+typedef enum MeshType {
+  MESH_TYPE_GENERAL,
+  MESH_TYPE_POLYGONAL,
+  MESH_TYPE_SMOOTH
+} mesh_type;
+
 /**
  * \class ParametrizedMesh
  * \brief This class represents a mesh which is comprised of panels in the
@@ -26,7 +32,7 @@ public:
    * Constructor using a PanelVector object which contains the component
    * panels of the mesh in the form of parametrized curves.
    */
-  ParametrizedMesh(PanelVector panels);
+  ParametrizedMesh(PanelVector panels, mesh_type meshtype = MESH_TYPE_GENERAL, void *data = NULL);
 
   /**
    * This function is used for retrieving a PanelVector containing all the
@@ -92,6 +98,16 @@ public:
    */
   bool isPolygonal() const;
 
+  /**
+   * This function returns true iff the mesh is smooth (cubic spline).
+   */
+  bool isSmooth() const { return type_ == MESH_TYPE_SMOOTH; }
+
+  /**
+   * This function returns the additional data.
+   */
+  void *getData() const { return data_; }
+
   //void addPanels(const PanelVector& panels) {
   //  panels_.insert()
   //}
@@ -110,6 +126,14 @@ private:
    * Private field containing the cummulative sums of panel lengths.
    */
   std::vector<double> c_sums_;
+  /**
+   * This private field is the mesh type.
+   */
+  mesh_type type_;
+  /**
+   * Private field containing pointer to additional data.
+   */
+  void *data_;
 }; // class ParametrizedMesh
 
 #endif // PARAMETRIZEDMESHHPP

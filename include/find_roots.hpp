@@ -34,12 +34,12 @@
  * @param num_iter numbers of iterations taken to find root
  * @return value of root if root was found
  */
-double zbrent( const std::function<double(double)> f,
-               double x1,
-               double x2,
-               double tol,
-               bool &root_found,
-               unsigned &num_iter);
+double zbrent(const std::function<double(double)> f,
+              double x1,
+              double x2,
+              double tol,
+              bool &root_found,
+              unsigned &num_iter);
 
 /**
  * Search for roots using Newton Raphson method.
@@ -58,13 +58,13 @@ double zbrent( const std::function<double(double)> f,
  * @param num_iter numbers of iterations taken to find root
  * @return value of root if root was found
  */
-double rtsafe( const std::function<double(double)> f,
-               const std::function<Eigen::MatrixXd(double)> f_both,
-               double x1,
-               double x2,
-               double tol,
-               bool &root_found,
-               unsigned &num_iter);
+double rtsafe(const std::function<double(double)> f,
+              const std::function<Eigen::MatrixXd(double)> f_both,
+              double x1,
+              double x2,
+              double tol,
+              bool &root_found,
+              unsigned &num_iter);
 
 /**
  * Search for roots using Newton Raphson method.
@@ -83,10 +83,10 @@ double rtsafe( const std::function<double(double)> f,
  * @param num_iter numbers of iterations taken to find root
  * @return value of root if root was found
  */
-std::vector<double> findZeros( const std::function<Eigen::MatrixXd(double)> f_both,
-               double a,
-               double b,
-               double init_len);
+std::vector<double> findZeros(const std::function<Eigen::MatrixXd(double)> f_both,
+                              double a,
+                              double b,
+                              double init_len);
 
 /**
  * Search for roots using Newton Raphson method.
@@ -107,10 +107,10 @@ std::vector<double> findZeros( const std::function<Eigen::MatrixXd(double)> f_bo
  */
 template <typename RECORDER = std::function<void(std::vector<grid_data>)>>
 std::vector<double> findZeros_seq(const std::function<Eigen::MatrixXd(double)> f_both,
-                               double a,
-                               double b,
-                               unsigned int m,
-                               RECORDER rec = [](std::vector<grid_data>)->void{});
+                                  double a,
+                                  double b,
+                                  unsigned int m,
+                                  RECORDER rec = [](std::vector<grid_data>)->void{});
 
 /**
  * This function computes the value of the function \p f and it's two
@@ -148,17 +148,17 @@ Eigen::VectorXd parabolic_approximation(const std::function<Eigen::VectorXd(doub
  * @param num_iter number of iterations taken to find root
  * @return value of found root if a root was found
  */
-double secant_method( std::function<double(double)> f,
-                      double x0,
-                      double x1,
-                      const double tol,
-                      const unsigned maxIter,
-                      bool &root_found,
-                      unsigned &num_iter);
+double secant_method(std::function<double(double)> f,
+                     double x0,
+                     double x1,
+                     const double tol,
+                     const unsigned maxIter,
+                     bool &root_found,
+                     unsigned &num_iter);
 
 std::vector<double> general_cubic_formula(double a, double b, double c, double d, double x0, double x1);
 
-std::vector<double> zerosquadpolstab( double b, double c, double x0, double x1);
+std::vector<double> zerosquadpolstab(double b, double c, double x0, double x1);
 
 void min_shrinkage(double mu, std::vector<double> &pot_zeros, double init_len);
 

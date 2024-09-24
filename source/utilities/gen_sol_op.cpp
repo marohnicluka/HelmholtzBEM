@@ -1,6 +1,8 @@
 #include "gen_sol_op.hpp"
 #include "mass_matrix.hpp"
+#include "hmatrix.hpp"
 #include <iostream>
+#include <chrono>
 
 //#define DIEGO_BUILDER 1
 #ifdef DIEGO_BUILDER
@@ -68,8 +70,33 @@ void SolutionsOperator::gen_sol_op_in(GalerkinBuilder &builder, const complex_t 
     V_o = single_layer_helmholtz::GalerkinMatrix(msh, tstsp, N, k, c_o);
 #else
     if (builder_data.testTrialSpacesAreEqual()) {
+
+        builder.initializeSparseAssembly(k, c_i);
+        std::function<complex_t(size_t,size_t)> f = [&](size_t row, size_t col) {
+            complex_t ret = builder.getDoubleLayerElement(row, col);
+            return ret;
+        };
+        hierarchical::PanelGeometry pg(builder_data.mesh.getPanels());
+        hierarchical::BlockTree tree(pg, 1.2);
+        std::cout << "Creating h-matrix..." << std::endl;
+        auto tic = std::chrono::high_resolution_clock::now();
+        hierarchical::Matrix hmat(f, tree, 1e-5);
+        auto toc = std::chrono::high_resolution_clock::now();
+        double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic).count() * 1e-3;
+        std::cout << "H-matrix assembly done in " << elapsed << " seconds" << std::endl;
+        std::cout << "HMAT FILLED: " << (100. * double(hmat.param_count())) / ((pg.size() - 1) * (pg.size() - 1)) << " %" << std::endl;
+        hmat.truncate();
+        std::cout << "HMAT FILLED AFTER TRUNCATION: " << (100. * double(hmat.param_count())) / ((pg.size() - 1) * (pg.size() - 1)) << " %" << std::endl;
+        auto hmat_dense = hmat.to_dense_matrix();
+
+        std::cout << "Dense assembly..." << std::endl;
+        tic = std::chrono::high_resolution_clock::now();
         builder.assembleAll(k, c_i);
+        toc = std::chrono::high_resolution_clock::now();
+        elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(toc - tic).count() * 1e-3;
+        std::cout << "Dense assembly done in " << elapsed << " seconds" << std::endl;
         K_i = builder.getDoubleLayer();
+        std::cout << "HMAT ERROR: " << (hmat_dense - K_i).norm() / K_i.norm() << std::endl;
         W_i = builder.getHypersingular();
         V_i = builder.getSingleLayer();
         builder.assembleAll(k, c_o);

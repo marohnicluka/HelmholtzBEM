@@ -1,6 +1,8 @@
 #include <iostream>
 #include <execution>
-#include <boost/math/quadrature/gauss_kronrod.hpp>
+#include <boost/math/quadrature/tanh_sinh.hpp>
+#include <gsl/gsl_integration.h>
+#include <gsl/gsl_errno.h>
 #include "solvers.hpp"
 #include "mass_matrix.hpp"
 #include "continuous_space.hpp"
@@ -11,16 +13,50 @@
 #include "cspline.hpp"
 #include "scatterer.hpp"
 
-//#define EXTERNAL_INTEGRATION 1
+#define EXTERNAL_INTEGRATION 1
 //#define PARALLEL_KERNEL_COMPUTATION 1
+//#define PARALLEL_GRID_COMPUTATION 1  // does not work!!
 #define USE_LAPACK_SOLVER 1
+#ifdef PARALLEL_GRID_COMPUTATION
+#define EXEC_POLICY std::execution::par,
+#else
+#define EXEC_POLICY
+#endif
 
 #ifdef USE_LAPACK_SOLVER
-#include "complex.h"
 #include "lapacke.h"
+#include "complex.h"
 #endif
 
 typedef std::complex<double> complex_t;
+
+template<int p = Eigen::Dynamic>
+Eigen::Matrix<complex_t,-1,p> complex_LU_solve(Eigen::MatrixXcd &A, Eigen::Matrix<complex_t,-1,p> &B, int *ws = NULL) {
+#ifdef USE_LAPACK_SOLVER
+            lapack_complex_double *a, *b;
+            lapack_int n = A.rows(), *ipiv = ws == NULL ? new lapack_int[n] : ws;
+            lapack_int info, lda = n, ldb = n, nrhs = p < 0 ? B.cols() : p;
+            a = reinterpret_cast<lapack_complex_double*>(A.data());
+            b = reinterpret_cast<lapack_complex_double*>(B.data());
+            LAPACK_zgesv(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info);
+            if (ws == NULL)
+                delete[] ipiv;
+            assert(info >= 0);
+            if (info > 0)
+                throw std::runtime_error("zgesv: LU is singular");
+            Eigen::Matrix<complex_t,-1,p> res;
+            res.resize(n, nrhs);
+            for (unsigned j = 0; j < nrhs; ++j) for (unsigned i = 0; i < n; ++i) {
+                auto bij = b[j * n + i];
+                res(i, j) = complex_t(creal(bij), cimag(bij));
+            }
+            return res;
+#else
+            Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXcd> > lu(A);
+            return lu.solve(rhs);
+#endif
+}
+
 namespace bvp {
     namespace direct_first_kind {
         Eigen::VectorXcd solve_dirichlet(const ParametrizedMesh &mesh,
@@ -113,7 +149,6 @@ namespace tp {
                                const std::complex<double> &k,
                                const double c_o,
                                const double c_i) {
-            QuadRule GaussQR = getGaussQR(order, 0., 1.);
             ContinuousSpace<1> test_space;
             BuilderData builder_data(mesh, test_space, test_space, order);
             auto sol_op = SolutionsOperator(builder_data, false);
@@ -121,25 +156,7 @@ namespace tp {
             Eigen::VectorXcd rhs;
             A_rhs(mesh, u_inc, u_inc_del, k, c_o, c_i, sol_op, so, rhs);
             // Solving for coefficients
-#ifdef USE_LAPACK_SOLVER
-            lapack_complex_double *a, *b;
-            lapack_int n = so.rows(), *ipiv = new lapack_int[n];
-            lapack_int info, lda = n, ldb = n, nrhs = 1;
-            a = reinterpret_cast<lapack_complex_double*>(so.data());
-            b = reinterpret_cast<lapack_complex_double*>(rhs.data());
-            LAPACK_zgesv(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info);
-            assert(info == 0);
-            delete[] ipiv;
-            Eigen::VectorXcd res(n);
-            for (int i = 0; i < n; ++i) {
-                auto bi = b[i];
-                res(i) = std::complex<double>(creal(bi), cimag(bi));
-            }
-            return res;
-#else
-            Eigen::PartialPivLU<Eigen::MatrixXcd> dec(so);
-            return dec.solve(rhs);
-#endif
+            return complex_LU_solve<1>(so, rhs);
         }
 
         void in_solve(const ParametrizedMesh &mesh,
@@ -200,20 +217,34 @@ namespace tp {
             double x_step = width / (grid_size_x - 1.);
             double y_step = height / (grid_size_y - 1.);
             complex_t k_sqrt_ci = k * std::sqrt(c_i), k_sqrt_co = k * std::sqrt(c_o), kappa;
-            bool inside, k_real_positive = k.imag() == 0 && k.real() > 0;
+            bool k_real_positive = k.imag() == 0 && k.real() > 0;
             unsigned done = 0;
-            std::vector<std::pair<std::pair<size_t,size_t>,complex_t> > comp;
-            comp.reserve(grid_size_x * grid_size_y);
-            // workspace
-            Eigen::ArrayXXcd Z, H0, H1, G;
+            std::vector<std::pair<size_t,size_t> > ind(numpanels * n), array_ind(grid_size_x * grid_size_y);
+            std::iota(ind.begin(), ind.end(), PairInc<size_t>(0, 0, numpanels));
+            std::iota(array_ind.begin(), array_ind.end(), PairInc<size_t>(0, 0, grid_size_x));
+            std::vector<complex_t> array_flat(grid_size_x * grid_size_y);
+            boost::math::quadrature::tanh_sinh<double> integrator;
+            gsl_integration_workspace * w = gsl_integration_workspace_alloc(1000);
+            gsl_set_error_handler_off();
+#ifndef PARALLEL_GRID_COMPUTATION
+            Eigen::ArrayXXcd Z, H0, H1;
             Eigen::ArrayXXd X;
             H0.resize(numpanels, n);
             H1.resize(numpanels, n);
-            std::vector<std::pair<size_t,size_t> > ind(numpanels * n);
-            std::iota(ind.begin(), ind.end(), PairInc<size_t>(0, 0, numpanels));
             auto kernel_func = complex_bessel::Hankel1Real01(numpanels, n);
-            for (size_t II = 0; II < grid_size_x; ++II) for (size_t JJ = 0; JJ < grid_size_y; ++JJ) {
+            complex_t retval;
+            bool inside;
+#else
+            Eigen::setNbThreads(1);
+#endif
+            std::transform(EXEC_POLICY array_ind.cbegin(), array_ind.cend(), array_flat.begin(), [&](const auto &II_JJ) {
+                unsigned II = II_JJ.first, JJ = II_JJ.second;
                 unsigned i, prog = (100 * (++done)) / (grid_size_x * grid_size_y);
+#ifdef PARALLEL_GRID_COMPUTATION
+                auto kernel_func = complex_bessel::Hankel1Real01(numpanels, n);
+                complex_t retval;
+                bool inside;
+#endif
 #ifdef CMDL
                 auto pstr = std::to_string(prog);
                 std::cout << "\rLifting solution from traces... " << pstr << "%" << std::string(3 - pstr.length(), ' ');
@@ -223,72 +254,125 @@ namespace tp {
                 x << lower_left_corner(0) + II * x_step, lower_left_corner(1) + JJ * y_step;
                 grid_X(II, JJ) = x(0);
                 grid_Y(II, JJ) = x(1);
+#if 0
                 double t0L;
                 if (scatterer::distance(mesh, x, &i, &t0L) < 1e-8) { // on the boundary
                     double len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t0L * mesh.getPanels()[i]->length();
                     S(II, JJ) = trace_dir.eval(len);
-                } else {
-                    inside = scatterer::inside_poly(mesh, x);
+                } else
+#endif
+                {
+                    if (mesh.isSmooth()) {
+                        auto *sscat = static_cast<scatterer::SmoothScatterer*>(mesh.getData());
+                        inside = sscat->is_inside(x);
+                    } else inside = scatterer::inside_mesh(mesh, x);
                     kappa = inside ? k_sqrt_ci : k_sqrt_co;
-#ifndef EXTERNAL_INTEGRATION
-                    Z = Y + x(0) + 1i * x(1);
-                    X = Z.cwiseAbs();
+#ifdef EXTERNAL_INTEGRATION
+                    if (scatterer::distance(mesh, x) * std::abs(kappa) > 1e-2) {
+#endif
+#ifdef PARALLEL_GRID_COMPUTATION
+                        Eigen::ArrayXXcd Z, H0, H1;
+                        Eigen::ArrayXXd X;
+                        H0.resize(numpanels, n);
+                        H1.resize(numpanels, n);
+#endif
+                        Z = Y + x(0) + 1i * x(1);
+                        X = Z.cwiseAbs();
 #ifndef PARALLEL_KERNEL_COMPUTATION
-                    if (k_real_positive)
-                        kernel_func.h1_01(kappa.real() * X, H0, H1);
-                    else
-#endif
-                    for_each(std::execution::par_unseq, ind.cbegin(), ind.cend(), [&](const auto &ij) {
-                        size_t ii = ij.first, jj = ij.second;
-#ifdef PARALLEL_KERNEL_COMPUTATION
                         if (k_real_positive)
-                            complex_bessel::H1_01(kappa.real() * X(ii, jj), H0(ii, jj), H1(ii, jj));
-                        else {
+                            kernel_func.h1_01(kappa.real() * X, H0, H1);
+                        else
 #endif
-                            H0(ii, jj) = complex_bessel::HankelH1(0., kappa * X(ii, jj));
-                            H1(ii, jj) = complex_bessel::HankelH1(1., kappa * X(ii, jj));
+                        for_each(std::execution::par_unseq, ind.cbegin(), ind.cend(), [&](const auto &ij) {
+                            size_t ii = ij.first, jj = ij.second;
 #ifdef PARALLEL_KERNEL_COMPUTATION
-                        }
+                            if (k_real_positive)
+                                complex_bessel::H1_01(kappa.real() * X(ii, jj), H0(ii, jj), H1(ii, jj));
+                            else {
 #endif
-                    });
-                    G = (H0 * (inside ? Trace_i_N : Trace_o_N)
-                        - kappa * H1 * (inside ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D;
-                    S(II, JJ) = (inside ? 1. : -1.) * 1i * 0.25 * G.sum();
-#else
-                    complex_t z = 0.;
-                    for (i = 0; i < numpanels; ++i) {
-                        const auto &panel = *mesh.getPanels()[i];
-                        auto func = [&](double t) {
-                            Eigen::Vector2d y = panel[t], tangent = panel.Derivative_01(t), normal_o;
-                            double d = (x - y).norm(), len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t * panel.length();
-                            complex_t h0, h1, tD, tN;
-                            if (k_real_positive) {
-                                complex_bessel::H1_01(kappa.real() * d, h0, h1);
-                            } else {
-                                h0 = complex_bessel::HankelH1(0, kappa * d);
-                                h1 = complex_bessel::HankelH1(1, kappa * d);
+                                H0(ii, jj) = complex_bessel::HankelH1(0., kappa * X(ii, jj));
+                                H1(ii, jj) = complex_bessel::HankelH1(1., kappa * X(ii, jj));
+#ifdef PARALLEL_KERNEL_COMPUTATION
                             }
-                            tD = trace_dir.eval(len);
-                            tN = trace_neu.eval(len);
-                            normal_o << tangent(1), -tangent(0);
-                            normal_o.normalize();
-                            if (!inside) {
-                                tD -= u_inc(y(0), y(1));
-                                tN -= normal_o.dot(u_inc_del(y(0), y(1)));
+#endif
+                        });
+                        retval = (inside ? 1. : -1.) * 1i * 0.25
+                            * ((H0 * (inside ? Trace_i_N : Trace_o_N)
+                                - kappa * H1 * (inside ? Trace_i_D : Trace_o_D) * (Z.real() * N.real() + Z.imag() * N.imag()) / X) * D).sum();
+#ifdef EXTERNAL_INTEGRATION
+                    } else {
+                        complex_t z = 0.;
+                        for (i = 0; i < numpanels; ++i) {
+                            const auto &panel = *mesh.getPanels()[i];
+                            std::function<complex_t(double)> func = [&](double t) {
+                                Eigen::Vector2d y = panel[t], tangent = panel.Derivative_01(t), normal_o;
+                                double d = (x - y).norm(), len = (i > 0 ? mesh.getCSum(i - 1) : 0.) + t * panel.length();
+                                complex_t h0, h1, tD, tN;
+                                if (k_real_positive) {
+                                    complex_bessel::H1_01(kappa.real() * d, h0, h1);
+                                } else {
+                                    h0 = complex_bessel::HankelH1(0, kappa * d);
+                                    h1 = complex_bessel::HankelH1(1, kappa * d);
+                                }
+                                tD = trace_dir.eval(len);
+                                tN = trace_neu.eval(len);
+                                normal_o << tangent(1), -tangent(0);
+                                normal_o.normalize();
+                                if (!inside) {
+                                    tD -= u_inc(y(0), y(1));
+                                    tN -= normal_o.dot(u_inc_del(y(0), y(1)));
+                                }
+                                return (h0 * tN - kappa * h1 * tD * normal_o.dot(x - y) / d) * tangent.norm();
+                            };
+#if 1 // use GSL
+                            double error, res_real, res_imag, gsl_tol = 1e-9;
+                            int retcode;
+                            gsl_function Freal = {
+                                [](double d, void* vf) -> double {
+                                    auto& f = *static_cast<std::function<complex_t(double)>*>(vf);
+                                    return f(d).real();
+                                },
+                                &func
+                            };
+                            gsl_function Fimag = {
+                                [](double d, void* vf) -> double {
+                                    auto& f = *static_cast<std::function<complex_t(double)>*>(vf);
+                                    return f(d).imag();
+                                },
+                                &func
+                            };
+                            retcode = gsl_integration_qags (&Freal, 0, 1, 0, gsl_tol, 1000, w, &res_real, &error);
+                            if (!retcode)
+                                retcode = gsl_integration_qags (&Fimag, 0, 1, 0, gsl_tol, 1000, w, &res_imag, &error);
+                            if (!retcode)
+                                z += complex_t(res_real, res_imag);
+                            else {
+                                std::cerr << "GSL integration failed for panel " << i << " ("
+                                          << panel[0](0) << "," << panel[0](1) << " : " << panel[1](0) << "," << panel[1](1) << "), x = ("
+                                          << x(0) << "," << x(1) << "), using Boost integrator instead" << std::endl;
+                                z += integrator.integrate(func, 0., 1.);
                             }
-                            return (h0 * tN - kappa * h1 * tD * normal_o.dot(x - y) / d) * tangent.norm();
-                        };
-                        z += boost::math::quadrature::gauss_kronrod<double, 15>::integrate(func, 0, 1, 10, 1e-6);
+
+#else // use Boost
+                            z += integrator.integrate(func, 0., 1.);
+#endif
+                        }
+                        retval = (inside ? 1. : -1.) * 1i * 0.25 * z;
                     }
-                    S(II, JJ) = (inside ? 1. : -1.) * 1i * 0.25 * z;
 #endif
                     if (add_u_inc && !inside)
-                        S(II, JJ) += u_inc(x(0), x(1));
+                        retval += u_inc(x(0), x(1));
                 }
-            }
+                return retval;
+            });
 #ifdef CMDL
             std::cout << std::endl;
 #endif
+            for (unsigned JJ = 0; JJ < grid_size_y; ++JJ) {
+                for (unsigned II = 0; II < grid_size_x; ++II) {
+                    S(II, JJ) = array_flat[JJ * grid_size_x + II];
+                }
+            }
         }
 
         Eigen::ArrayXXcd solve_in_rectangle(const ParametrizedMesh& mesh,
@@ -313,8 +397,7 @@ namespace tp {
             Eigen::VectorXcd rhs;
             A_rhs(mesh, u_inc, u_inc_del, k, c_o, c_i, sol_op, so, rhs);
             // Solving for coefficients
-            Eigen::HouseholderQR<Eigen::MatrixXcd> dec(so);
-            auto traces = dec.solve(rhs);
+            Eigen::VectorXcd traces = complex_LU_solve<1>(so, rhs);
             unsigned numpanels = mesh.getNumPanels();
             ComplexSpline trace_dir(mesh, traces.head(numpanels));
             ComplexSpline trace_neu(mesh, traces.tail(numpanels));

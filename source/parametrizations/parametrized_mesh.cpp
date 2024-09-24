@@ -10,7 +10,9 @@
 #include <limits>
 #include <Eigen/Dense>
 
-ParametrizedMesh::ParametrizedMesh(PanelVector panels) : panels_(panels) {
+ParametrizedMesh::ParametrizedMesh(PanelVector panels, mesh_type meshtype, void *data)
+  : panels_(panels), type_(meshtype), data_(data)
+{
   // std::cout << "ParametrizedMesh constructor called!" << std::endl;
   unsigned int N = getNumPanels();
   c_sums_.resize(N);
@@ -66,10 +68,14 @@ double ParametrizedMesh::maxPanelLength() const {
 }
 
 bool ParametrizedMesh::isPolygonal() const {
-  for (const auto &p : panels_) {
-    if (!p->isLineSegment())
-      return false;
+  if (type_ == MESH_TYPE_POLYGONAL)
+    return true;
+  else if (type_ == MESH_TYPE_GENERAL) {
+    for (const auto &p : panels_) {
+      if (!p->isLineSegment())
+        return false;
+    }
+    return true;
   }
-  return true;
+  return false;
 }
-

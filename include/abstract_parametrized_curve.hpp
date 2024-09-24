@@ -28,7 +28,7 @@ class AbstractParametrizedCurve;
  * to store the components of a mesh by using additional constraints. Smart
  * pointers are used to free up memory whenever the pointer is destroyed.
  */
-using PanelVector = std::vector<std::shared_ptr<AbstractParametrizedCurve>>;
+using PanelVector = std::vector<std::shared_ptr<AbstractParametrizedCurve> >;
 
 /**
  * \class AbstractParametrizedCurve
@@ -204,6 +204,7 @@ public:
    * This function returns true iff the curve is a line segment.
    */
   virtual bool isLineSegment() const = 0;
+
 }; // class AbstractParametrizedCurve
 
 /**
@@ -215,8 +216,8 @@ public:
  * @param pi_p Second parametrized curve
  * @return Admissibility value for the given pair of panels
  */
-inline double rho(const AbstractParametrizedCurve &pi,
-                  const AbstractParametrizedCurve &pi_p) {
+inline double rho(AbstractParametrizedCurve &pi,
+                  AbstractParametrizedCurve &pi_p) {
   // Numerator: longer panel length
   double num = std::max(pi.length(), pi_p.length());
   // Denominator: distance between panels

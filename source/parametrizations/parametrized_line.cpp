@@ -18,7 +18,7 @@ using Point = typename ParametrizedLine::Point;
 using namespace std::complex_literals;
 
 ParametrizedLine::ParametrizedLine(Point first, Point second)
-: start_(first), end_(second) { }
+  : start_(first), end_(second) { }
 
 Point ParametrizedLine::operator()(double t) const {
   assert(IsWithinParameterRange(t));

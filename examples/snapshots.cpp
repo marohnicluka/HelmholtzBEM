@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
     // read polygonal scatterer from file
     Eigen::VectorXd poly_x, poly_y;
-    if (!scatterer::read_polygon(fname_scatterer, poly_x, poly_y)) {
+    if (!scatterer::read(fname_scatterer, poly_x, poly_y)) {
         std::cerr << "Error: failed to read scatterer from file" << std::endl;
         return 1;
     }
@@ -83,7 +83,8 @@ int main(int argc, char** argv) {
         double f = atof(argv[7]);
         Npanels = scatterer::auto_num_panels(poly_x, poly_y, f);
     } else Npanels = atoi(argv[7]);
-    auto mesh = scatterer::panelize(poly_x, poly_y, Npanels, 0.25);
+    ParametrizedMesh mesh(scatterer::make_polygonal_panels(poly_x, poly_y, Npanels, 0.25));
+    std::cout << "Number of panels: " << mesh.getNumPanels() << std::endl;
     for (const auto &p : mesh.getPanels()) {
         if (p->length() > M_PI / (5. * k_max.real())) {
 #ifdef CMDL
@@ -92,8 +93,6 @@ int main(int argc, char** argv) {
             break;
         }
     }
-
-    std::cout << "Number of panels: " << mesh.getNumPanels() << std::endl;
 
     // generate output filename with set parameters
     std::string base_name = "file_snapshots_";

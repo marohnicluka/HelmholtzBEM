@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     // read polygonal scatterer from file
     string fname_scatterer = argv[1];
     Eigen::VectorXd poly_x, poly_y;
-    if (!scatterer::read_polygon(fname_scatterer, poly_x, poly_y)) {
+    if (!scatterer::read(fname_scatterer, poly_x, poly_y)) {
         std::cerr << "Error: failed to read scatterer from file" << std::endl;
         return 1;
     }
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
 
     auto tic = high_resolution_clock::now();
 
-    auto mesh = scatterer::panelize(poly_x, poly_y, Npanels, rfac);
+    ParametrizedMesh mesh(scatterer::make_polygonal_panels(poly_x, poly_y, Npanels, rfac));
     int nr = 2 * mesh.getNumPanels(), nc = 4;
     auto W = randomized_svd::randGaussian(nr, nc);
     BuilderData builder_data(mesh, cont_space, cont_space, order);

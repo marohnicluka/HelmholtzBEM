@@ -8,66 +8,143 @@
  */
 
 #include "parametrized_polynomial.hpp"
-
 #include <assert.h>
 #include <cmath>
 #include <iostream>
 #include <utility>
 #include <vector>
-
+#include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <Eigen/Dense>
 
 using CoefficientsList = typename ParametrizedPolynomial::CoefficientsList;
 
-ParametrizedPolynomial::ParametrizedPolynomial(CoefficientsList coeffs,
-                                               double tmin, double tmax)
-    : coeffs_(coeffs), tmin_(tmin), tmax_(tmax) {
-  assert(coeffs.cols() >= 3); // Asserting degree is at least 2
-}
+ParametrizedPolynomial::ParametrizedPolynomial(const ComplexSpline &spline,
+                                               double tmin, double tmax, double len)
+    : spline_(spline), length_(len), tmin_(tmin), tmax_(tmax) { }
 
 Eigen::Vector2d ParametrizedPolynomial::operator()(double t) const {
   assert(IsWithinParameterRange(t));
-  t = t * (tmax_ - tmin_) / 2 +
-      (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
-  // Number of terms in the polynomial
-  int N = coeffs_.cols();
-  // The output vector
-  Eigen::VectorXd point = Eigen::VectorXd::Zero(2);
-  // Filling the cosine and sine vectors
-  for (int i = 0; i < N; ++i) {
-    point += std::pow(t, i) * coeffs_.col(i);
-  }
+  t = t * (tmax_ - tmin_) / 2 + (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval(t);
+  point << z.real(), z.imag();
   return point;
+}
+
+Eigen::Vector2d ParametrizedPolynomial::operator[](double t) const {
+  assert(IsWithinParameterRange(t));
+  t = t * (tmax_ - tmin_) + tmin_; // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval(t);
+  point << z.real(), z.imag();
+  return point;
+}
+
+Eigen::Vector2d ParametrizedPolynomial::swapped_op(double t) const {
+  assert(IsWithinParameterRange(t));
+  t = tmax_ - t * (tmax_ - tmin_); // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval(t);
+  point << z.real(), z.imag();
+  return point;
+}
+
+Eigen::ArrayXXcd ParametrizedPolynomial::operator()(const Eigen::ArrayXXd &t) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  Eigen::ArrayXXcd ret(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->operator()(t(i, j));
+    ret(i, j) = std::complex<double>(v(0), v(1));
+  }
+  return ret;
+}
+
+Eigen::ArrayXXcd ParametrizedPolynomial::operator[](const Eigen::ArrayXXd &t) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  Eigen::ArrayXXcd ret(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->operator[](t(i, j));
+    ret(i, j) = std::complex<double>(v(0), v(1));
+  }
+  return ret;
+}
+
+Eigen::ArrayXXcd ParametrizedPolynomial::swapped_op(const Eigen::ArrayXXd &t) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  Eigen::ArrayXXcd ret(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->swapped_op(t(i, j));
+    ret(i, j) = std::complex<double>(v(0), v(1));
+  }
+  return ret;
 }
 
 Eigen::Vector2d ParametrizedPolynomial::Derivative(double t) const {
   assert(IsWithinParameterRange(t));
-  t = t * (tmax_ - tmin_) / 2 +
-      (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
-  // Number of terms in the polynomial
-  int N = coeffs_.cols();
-  // The output vector
-  Eigen::VectorXd derivative = Eigen::VectorXd::Zero(2);
-  // Filling the cosine and sine vectors
-  for (int i = 1; i < N; ++i) {
-    derivative += i * std::pow(t, i - 1) * coeffs_.col(i);
+  t = t * (tmax_ - tmin_) / 2 + (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval_der(t);
+  point << z.real(), z.imag();
+  return point;
+}
+
+Eigen::Vector2d ParametrizedPolynomial::Derivative_01(double t) const {
+  assert(IsWithinParameterRange(t));
+  t = t * (tmax_ - tmin_) + tmin_; // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval_der(t);
+  point << z.real(), z.imag();
+  return point;
+}
+
+Eigen::Vector2d ParametrizedPolynomial::Derivative_01_swapped(double t) const {
+  assert(IsWithinParameterRange(t));
+  t = tmax_ - t * (tmax_ - tmin_); // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval_der(t);
+  point << z.real(), z.imag();
+  return point;
+}
+
+void ParametrizedPolynomial::Derivative(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  res.resize(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->Derivative(t(i, j));
+    res(i, j) = std::complex<double>(v(0), v(1));
   }
-  return derivative * (tmax_ - tmin_) / 2;
+  norm = res.cwiseAbs();
+}
+
+void ParametrizedPolynomial::Derivative_01(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  res.resize(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->Derivative_01(t(i, j));
+    res(i, j) = std::complex<double>(v(0), v(1));
+  }
+  norm = res.cwiseAbs();
+}
+
+void ParametrizedPolynomial::Derivative_01_swapped(const Eigen::ArrayXXd &t, Eigen::ArrayXXcd &res, Eigen::ArrayXXd &norm, bool neg) const {
+  unsigned nr = t.rows(), nc = t.cols(), i, j;
+  res.resize(nr, nc);
+  for (j = 0; j < nc; ++j) for (i = 0; i < nr; ++i) {
+    auto v = this->swapped_op(t(i, j));
+    res(i, j) = std::complex<double>(v(0), v(1));
+  }
+  norm = res.cwiseAbs();
+  if (neg)
+    res *= -1.;
 }
 
 Eigen::Vector2d ParametrizedPolynomial::DoubleDerivative(double t) const {
   assert(IsWithinParameterRange(t));
-  t = t * (tmax_ - tmin_) / 2 +
-      (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
-  // Number of terms in the polynomial
-  int N = coeffs_.cols();
-  // The output vector
-  Eigen::VectorXd double_derivative = Eigen::VectorXd::Zero(2);
-  // Filling the cosine and sine vectors
-  for (int i = 2; i < N; ++i) {
-    double_derivative += i * (i - 1) * std::pow(t, i - 2) * coeffs_.col(i);
-  }
-  return double_derivative * (tmax_ - tmin_) / 2 * (tmax_ - tmin_) / 2;
+  t = t * (tmax_ - tmin_) / 2 + (tmax_ + tmin_) / 2; // converting to the range [tmin,tmax]
+  Eigen::Vector2d point;
+  auto z = spline_.eval_der(t, 2);
+  point << z.real(), z.imag();
+  return point;
 }
 
 PanelVector ParametrizedPolynomial::split(unsigned int N) const {
@@ -80,8 +157,17 @@ PanelVector ParametrizedPolynomial::split(unsigned int N) const {
     double tmax = tmin_ + (i + 1) * (tmax_ - tmin_) / N;
     if (i==N-1)
       tmax = tmax_;
+    std::function<double(double)> f = [&](double t) {
+      return std::abs(spline_.eval_der(t));
+    };
+    double len = boost::math::quadrature::gauss_kronrod<double, 15>::integrate(f, tmin, tmax, 5, 1e-8);
     // Adding the part parametrization to the vector with a shared pointer
-    parametrization_parts.push_back(std::make_shared<ParametrizedPolynomial>(coeffs_, tmin, tmax));
+    parametrization_parts.push_back(std::make_shared<ParametrizedPolynomial>(spline_, tmin, tmax, len));
   }
   return parametrization_parts;
 }
+
+double ParametrizedPolynomial::length() {
+  return length_;
+}
+

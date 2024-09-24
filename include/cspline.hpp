@@ -18,8 +18,11 @@
 
 using namespace std;
 
-class ComplexSpline
-{
+/**
+ * This class represents a (periodic) Akima spline interpolation
+ * of a complex univariate function.
+ */
+class ComplexSpline {
     unsigned int n;
     double *t;
     double *re;
@@ -36,6 +39,7 @@ public:
     double x_val(unsigned i) const { assert(i < n); return t[i]; }
     std::complex<double> y_val(unsigned i) const { assert(i < n); return re[i] + 1i * im[i]; }
     std::complex<double> eval(double x) const;
+    std::complex<double> eval_der(double x, int order = 1) const;
 };
 
 #endif // CSPLINE_HPP

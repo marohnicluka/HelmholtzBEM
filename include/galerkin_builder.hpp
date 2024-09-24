@@ -11,6 +11,8 @@
 #ifndef GALERKIN_BUILDERHPP
 #define GALERKIN_BUILDERHPP
 
+#include <map>
+#include <set>
 #include "abstract_bem_space.hpp"
 #include "abstract_parametrized_curve.hpp"
 #include "gauleg.hpp"
@@ -18,8 +20,7 @@
 
 #define HANKEL_VECTORIZE 1
 
-class BuilderData
-{
+class BuilderData {
     // panel vector
     PanelVector panels;
     // dimensions
@@ -86,8 +87,7 @@ public:
     bool getPanelsAreLines() const { return _panels_are_lines; }
 };
 
-class GalerkinBuilder
-{
+class GalerkinBuilder {
     // builder data object
     const BuilderData &data;
     // wavenumber and refraction index
@@ -121,6 +121,9 @@ class GalerkinBuilder
     Eigen::MatrixXcd double_layer_matrix, hypersingular_matrix, single_layer_matrix;
     Eigen::MatrixXcd double_layer_der_matrix, hypersingular_der_matrix, single_layer_der_matrix;
     Eigen::MatrixXcd double_layer_der2_matrix, hypersingular_der2_matrix, single_layer_der2_matrix;
+    // storage for sparse computation
+    std::map<std::pair<size_t,size_t>,std::complex<double> > dlp_sparse, hyp_sparse, slp_sparse;
+    std::set<std::pair<size_t,size_t> > computed_imat_indices;
     // Local-global map
     unsigned test_space_map(unsigned ii, unsigned i) { return data.test_space.LocGlobMap(ii + 1, i + 1, data.getTestSpaceDimension()) - 1; }
     unsigned trial_space_map(unsigned ii, unsigned i) { return data.trial_space.LocGlobMap(ii + 1, i + 1, data.getTrialSpaceDimension()) - 1; }
@@ -203,6 +206,26 @@ public:
      * @param der the order of derivative (default 0, derivatives are not computed)
      */
     void assembleAll(const std::complex<double> &k_in, double c_in, int der = 0);
+    /**
+     * This function initializes sparse assembly for the wavenumber k and
+     * the refraction number c_in.
+     *
+     * @param k_in wavenumber
+     * @param c_in refraction inside
+     */
+    void initializeSparseAssembly(const std::complex<double> &k_in, double c_in);
+    /**
+     * The following commands retrieve elements of single layer, double layer,
+     * and hypersingular layer, by computing only the required interaction matrices.
+     * Note that you should build double layer first, followed by single layer,
+     * and hypersingular should come last.
+     *
+     * @param row row index
+     * @param col column index
+     */
+    std::complex<double> getSingleLayerElement(size_t row, size_t col);
+    std::complex<double> getHypersingularElement(size_t row, size_t col);
+    std::complex<double> getDoubleLayerElement(size_t row, size_t col);
     // get timing info for profiling
     unsigned getInteractionMatrixAssemblyTime();
     unsigned getHankelComputationTime();

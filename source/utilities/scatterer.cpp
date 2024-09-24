@@ -9,15 +9,20 @@
 
 #include "scatterer.hpp"
 #include "parametrized_line.hpp"
+#include "find_roots.hpp"
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
 #include <numeric>
+#include <execution>
+#include <chrono>
+#include <boost/math/quadrature/gauss_kronrod.hpp>
 
 #define MAX_ITER_ALPHA 5000
 
 using namespace std;
+using namespace std::chrono;
 
 namespace scatterer {
 
@@ -66,7 +71,7 @@ namespace scatterer {
         return true;
     }
 
-    bool read_polygon(const string &fname, Eigen::VectorXd &x, Eigen::VectorXd &y, double scale) {
+    bool read(const string &fname, Eigen::VectorXd &x, Eigen::VectorXd &y, double scale) {
         Eigen::ArrayXXd ar;
         if (!read_array(fname, ar) || ar.cols() != 2)
             return false;
@@ -105,7 +110,50 @@ namespace scatterer {
         return (unsigned int)std::round(d / (min_s * f));
     }
 
-    ParametrizedMesh panelize(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor, bool print_info) {
+    PanelVector make_N_polygonal_panels(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N) {
+        assert(x.size() > 0 && x.size() == y.size());
+        PanelVector res;
+        res.reserve(N);
+        unsigned n = x.size(), i, cs = 0;
+        Eigen::Vector2d p, q;
+        Eigen::VectorXd m(n);
+        Eigen::VectorXd d(n);
+        double len = length(x, y), alpha = double(N) / len;
+        for (i = 0; i < n; ++i) {
+            p << x(i), y(i);
+            q << x(i == n - 1 ? 0 : i + 1), y(i == n - 1 ? 0 : i + 1);
+            cs += (m(i) = std::round(alpha * (d(i) = (p - q).norm())));
+        }
+        while (cs != N) {
+            int k = cs > N ? -1 : 1;
+            double min_var = std::numeric_limits<double>::max(), var, mean;
+            size_t i_min;
+            for (i = 0; i < n; ++i) {
+                m(i) += k;
+                auto a = d.array() / m.array();
+                mean = a.mean();
+                var = (a - mean).square().mean();
+                if (var < min_var) {
+                    min_var = var;
+                    i_min = i;
+                }
+                m(i) -= k;
+            }
+            m(i_min) += k;
+            cs += k;
+        }
+        assert(cs == N);
+        for (i = 0; i < n; ++i) {
+            p << x(i), y(i);
+            q << x(i == n - 1 ? 0 : i + 1), y(i == n - 1 ? 0 : i + 1);
+            auto panel = ParametrizedLine(p, q);
+            PanelVector panels = panel.split(m[i]);
+            res.insert(res.end(), panels.begin(), panels.end());
+        }
+        return res;
+    }
+
+    PanelVector make_polygonal_panels(const Eigen::VectorXd &x, const Eigen::VectorXd &y, unsigned N, double refinement_factor) {
         PanelVector res;
         unsigned n = x.size();
         int i, j;
@@ -224,41 +272,40 @@ namespace scatterer {
                 }
             }
         }
-        if (print_info) {
-#ifdef CMDL
-            std::cout << "Working with " << M << " panels" << std::endl;
-            double min_length = res[0]->length(), max_length = min_length, avg_length = 0., s = 0.;
-            for (i = 0; i < M; ++i) {
-                double len = res[i]->length();
-                if (len < min_length)
-                    min_length = len;
-                if (len > max_length)
-                    max_length = len;
-                avg_length += len;
-            }
-            avg_length /= double(M);
-            for (i = 0; i < M; ++i) {
-                s += std::pow(avg_length - res[i]->length(), 2);
-            }
-            s = std::sqrt(s);
-            std::cout << "Panel length (min, max, mean, variability): "
-                      << min_length << ", " << max_length << ", " << avg_length << ", " << s / avg_length << " %" << std::endl;
-#endif
-        }
-        return ParametrizedMesh(res);
+        return res;
     }
 
-    bool inside_poly(const ParametrizedMesh &mesh, const Eigen::Vector2d &p) {
+    bool inside_mesh(const ParametrizedMesh &mesh, const Eigen::Vector2d &p) {
         bool c = false;
-        unsigned i, n = mesh.getNumPanels();
+        unsigned i, n = mesh.getNumPanels(), m = 0, ic;
+        std::vector<unsigned int> pi;
+        pi.reserve(n);
         for (i = 0; i < n; ++i) {
             const auto &panel = *mesh.getPanels()[i];
-            double x1 = panel[0](0), x2 = panel[1](0), y1 = panel[0](1), y2 = panel[1](1);
-            if ((((y1 <= p(1)) && (p(1) < y2)) || ((y2 <= p(1)) && (p(1) < y1))) &&
-                (p(0) < (x2 - x1) * (p(1) - y1) / (y2 - y1) + x1))
+            auto p1 = panel[0], p2 = panel[1];
+            double x = p(0), y = p(1), x1 = p1(0), x2 = p2(0), y1 = p1(1), y2 = p2(1);
+            if ((((y1 <= y) && (y < y2)) || ((y2 <= y) && (y < y1))) &&
+                (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1))
                 c = !c;
+            if (!panel.isLineSegment() && (p2 - p1).dot(p - p1) > 0 && (p1 - p2).dot(p - p2) > 0) {
+                // additional check, whether p is between straight line and panel curve
+                double s = (y2 - y1) / (x2 - x1), si = 1. / s;
+                Eigen::Vector2d cp;
+                cp(0) = (y + si * x - y1 + s * x1) / (s + si);
+                cp(1) = s * (cp(0) - x1) + y1;
+                double t0 = (cp - p1).norm() / (p2 - p1).norm();
+                std::function<double(double)> f = [&](double t) {
+                    auto pt = panel[t];
+                    return std::pow(pt(1) + si * (pt(0) - x) - y, 2);
+                };
+                double t_min = brent_gsl_with_values(0, std::pow(y1 + si * (x1 - x) - y, 2), 1, std::pow(y2 + si * (x2 - x) - y, 2), t0, f(t0), f, 1e-6, ic);
+                auto p_min = panel[t_min];
+                double d = (cp - p_min).squaredNorm();
+                if ((p - cp).squaredNorm() <= d && (p - p_min).squaredNorm() <= d)
+                    ++m;
+            }
         }
-        return c;
+        return m % 2 ? !c : c;
     }
 
     double panel_distance(const ParametrizedMesh &mesh, unsigned i, const Eigen::Vector2d &p, double *t0) {
@@ -288,4 +335,171 @@ namespace scatterer {
         }
         return min_d;
     }
+
+    void print_panels_info(const PanelVector& panels) {
+        unsigned n = panels.size();
+        std::cout << "Working with " << n << " panels" << std::endl;
+        if (panels.empty())
+            return;
+        double min_length = panels[0]->length(), max_length = min_length, avg_length = 0., s = 0.;
+        for (const auto &panel : panels) {
+            double len = panel->length();
+            if (len < min_length)
+                min_length = len;
+            if (len > max_length)
+                max_length = len;
+            avg_length += len;
+        }
+        avg_length /= double(n);
+        for (const auto &panel : panels) {
+            s += std::pow(avg_length - panel->length(), 2);
+        }
+        s = std::sqrt(s);
+        std::cout << "Panel length (min, max, mean, stddev): "
+                  << min_length << ", " << max_length << ", " << avg_length << ", " << s / avg_length << " %" << std::endl;
+    }
+
+    SmoothScatterer::SmoothScatterer(const std::string& fname, double scale)
+        : GaussQR(getGaussQR(3, 0., 1.)), tol(1e-8), total_length_(-1.)
+    {
+        if (!read(fname, x, y, scale))
+            throw std::runtime_error("Failed to read data for smooth scatterer");
+        n = x.size();
+        assert(n > 1 && n == y.size());
+        x.conservativeResize(n + 1);
+        y.conservativeResize(n + 1);
+        x(n) = x(0);
+        y(n) = y(0);
+        double len = length(x, y); // approx circumference of the scatterer
+        t_vert.resize(2 * n + 1);
+        t_vert(0) = 0.;
+        vert.resize(2 * n);
+        Eigen::VectorXd t_vert_read(n + 1);
+        t_vert_read(0) = 0.;
+        // make spline from input vertices
+        for (unsigned i = 0; i < n; ++i) {
+            Eigen::Vector2d &p = vert[2 * i], q;
+            p << x(i), y(i);
+            q << x(i + 1), y(i + 1);
+            t_vert_read(i + 1) = t_vert(2 * (i + 1)) = (p - q).norm() / len + t_vert_read(i);
+        }
+        spline = new ComplexSpline(t_vert_read, x + 1i * y, true);
+        // interleave another n vertices
+        for (unsigned i = 0; i < n; ++i) {
+            double t = t_vert(2 * i + 1) = (t_vert(2 * i) + t_vert(2 * i + 2)) * .5;
+            vert[2 * i + 1] = curve_point(t);
+        }
+        dist.resize(2 * n);
+        ind.resize(2 * n);
+        std::iota(ind.begin(), ind.end(), 0);
+        // define functions for optimization and length computation
+        wf = [&](double t) {
+            auto z = spline->eval(t), dz = spline->eval_der(t);
+            double dx = z.real() - user_point(0), dy = z.imag() - user_point(1);
+            return (dx * dz.imag() - dy * dz.real()) / (dx * dx + dy * dy);
+        };
+        distf = [&](double t) {
+            return (user_point - curve_point(t)).norm();
+        };
+        lf = [&](double t) {
+            return std::abs(spline->eval_der(t));
+        };
+    }
+
+    Eigen::Vector2d SmoothScatterer::curve_point(double t) {
+        auto z = spline->eval(t);
+        Eigen::Vector2d q;
+        q << z.real(), z.imag();
+        return q;
+    }
+
+    bool SmoothScatterer::is_inside(const Eigen::Vector2d& p) {
+        user_point = p;
+        double res = 0.;
+        std::for_each(ind.cbegin(), ind.cend(), [&](unsigned i) {
+            double t0 = t_vert(i), t1 = t_vert(i + 1), d = t1 - t0;
+            res += boost::math::quadrature::gauss_kronrod<double, 15>::integrate(wf, t0, t1, 5, 1e-8);
+        });
+        res *= .5 * M_1_PI;
+        return std::abs(res) > 1e-15;
+    }
+
+    double SmoothScatterer::distance(const Eigen::Vector2d& p, double* t) {
+        std::transform(std::execution::par, ind.cbegin(), ind.cend(), dist.begin(), [&](unsigned i) {
+            return (p - vert[i]).norm();
+        });
+        double t_min, d, dl, dr;
+        unsigned iter_count, il, ir;
+        user_point = p;
+        std::vector<std::pair<double, double> > minima(2 * n, {0, -1});
+        std::transform(std::execution::par, ind.cbegin(), ind.cend(), minima.begin(), [&](unsigned i) {
+            il = i - 1, ir = (i + 1) % (2 * n + 1);
+            d = dist[i], dl = dist[il], dr = dist[ir];
+            if (d < dl && d < dr) {
+                t_min = brent_gsl_with_values(t_vert(il), dl, t_vert(ir), dr, t_vert(i), d, distf, tol, iter_count);
+                d = (p - curve_point(t_min)).norm();
+                return std::make_pair(d, t_min);
+            }
+            return std::make_pair(0., -1.);
+        });
+        minima.erase(std::remove_if(minima.begin(), minima.end(), [](const std::pair<double, double> &dt) { return dt.second < 0.; }), minima.end());
+        if (minima.empty()) // the scatterer is a regular polygon and p is its center
+            return (p - vert.front()).norm();
+        std::sort(minima.begin(), minima.end());
+        if (t != NULL)
+            *t = minima.front().second;
+        return minima.front().first;
+    }
+
+    double SmoothScatterer::total_length() {
+        if (total_length_ < 0.)
+            total_length_ = std::accumulate(ind.cbegin(), ind.cend(), 0., [&](double sum, unsigned i) {
+                return sum + boost::math::quadrature::gauss_kronrod<double, 15>::integrate(lf, t_vert(i), t_vert(i + 1), 5, tol);
+            });
+        return total_length_;
+    }
+
+    PanelVector SmoothScatterer::panelize(unsigned int npanels) {
+        auto tic = high_resolution_clock::now();
+        // compute the length of the curve
+        unsigned max_iter = 1000, ic;
+        double len = total_length(), panel_length = len / double(npanels), L, t0 = 0., t1, t2;
+        PanelVector panels;
+        panels.reserve(npanels);
+        for (unsigned i = 1; i < npanels; ++i) {
+            t1 = t0 + (1. - t0) / double(npanels - i + 1);
+            ic = 0;
+            while(ic < max_iter) {
+                L = boost::math::quadrature::gauss_kronrod<double, 15>::integrate(lf, t0, t1, 5, tol);
+                t2 = t1 + (panel_length - L) / lf(t1);
+                if (std::abs(t2 - t1) / t1 < tol)
+                    break;
+                t1 = t2;
+                ++ic;
+            }
+            panels.push_back(std::make_shared<ParametrizedPolynomial>(*spline, t0, t1, L));
+            t0 = t1;
+            len -= L;
+        }
+        panels.push_back(std::make_shared<ParametrizedPolynomial>(*spline, t0, 1., len));
+        auto toc = high_resolution_clock::now();
+#ifdef CMDL
+        double et = 1e-3 * duration_cast<milliseconds>(toc - tic).count();
+        std::cout << "Smooth scatterer panelized in " << et << " seconds" << std::endl;
+#endif
+        return panels;
+    }
+
+    void SmoothScatterer::sample_vertices(double refsize, unsigned int resolution, Eigen::VectorXd& vx, Eigen::VectorXd& vy) {
+        int N = (int)std::ceil((total_length() * resolution) / refsize);
+        vx.resize(N);
+        vy.resize(N);
+        double dt = 1./double(N);
+        for (int i = 0; i < N; ++i) {
+            auto p = curve_point(i * dt);
+            vx(i) = p(0);
+            vy(i) = p(1);
+        }
+    }
+
 }

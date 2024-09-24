@@ -305,7 +305,7 @@
             // Reference shape function 2 derivative, defined using a lambda expression
             BasisFunctionType b2dot_01_swapped = [&](double t) { return -1.0; };
             // Reference shape function 3 derivative, defined using a lambda expression
-            BasisFunctionType b3dot_01_swapped = [&](double t) { return 4.0 - 8.0 * t; };
+            BasisFunctionType b3dot_01_swapped = [&](double t) { return 8.0 * t - 4.0; };
             // Adding the reference shape function derivatives to the vector
             referenceshapefunctiondots_01_swapped_.push_back(b1dot_01_swapped);
             referenceshapefunctiondots_01_swapped_.push_back(b2dot_01_swapped);

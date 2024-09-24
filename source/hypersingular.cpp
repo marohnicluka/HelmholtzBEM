@@ -285,8 +285,8 @@
                     // Local to global mapping of the elements in interaction matrix
                     for (unsigned int ii = 0; ii < Q; ++ii) {
                         for (unsigned int jj = 0; jj < Q; ++jj) {
-                            int II = space.LocGlobMap(ii + 1, i + 1, numpanels) - 1;
-                            int JJ = space.LocGlobMap(jj + 1, j + 1, numpanels) - 1;
+                            int II = space.LocGlobMap(ii + 1, i + 1, dims) - 1;
+                            int JJ = space.LocGlobMap(jj + 1, j + 1, dims) - 1;
                             // Filling the Galerkin matrix entries
                             output(II, JJ) += interaction_matrix(ii, jj);
                         }
