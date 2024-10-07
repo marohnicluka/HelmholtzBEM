@@ -87,7 +87,7 @@ void ParametrizedCircularArc::Derivative(const Eigen::ArrayXXd &t, Eigen::ArrayX
     double mean = (phi_start_ + phi_end_) / 2.;
     double difference = (phi_end_ - phi_start_) / 2.;
     res = 1i * radius_ * difference * (1i * (t * difference + mean)).exp();
-    norm.setConstant(radius_ * std::abs(difference));
+    norm.setConstant(t.rows(), t.cols(), radius_ * std::abs(difference));
 }
 Eigen::Vector2d ParametrizedCircularArc::Derivative_01(double t) const {
     assert(IsWithinParameterRange(t));
@@ -102,7 +102,7 @@ void ParametrizedCircularArc::Derivative_01(const Eigen::ArrayXXd &t, Eigen::Arr
     // Derivative of the polar coordinaties used in the function operator()
     double difference = (phi_end_ - phi_start_);
     res = 1i * radius_ * difference * (1i * (t * difference + phi_start_)).exp();
-    norm.setConstant(radius_ * std::abs(difference));
+    norm.setConstant(t.rows(), t.cols(), radius_ * std::abs(difference));
 }
 Eigen::Vector2d ParametrizedCircularArc::Derivative_01_swapped(double t) const {
     assert(IsWithinParameterRange(t));
@@ -117,7 +117,7 @@ void ParametrizedCircularArc::Derivative_01_swapped(const Eigen::ArrayXXd &t, Ei
     // Derivative of the polar coordinaties used in the function operator()
     double difference = (phi_start_ - phi_end_);
     res = (neg ? -1. : 1.) * 1i * radius_ * difference * (1i * (t * difference + phi_end_)).exp();
-    norm.setConstant(radius_ * std::abs(difference));
+    norm.setConstant(t.rows(), t.cols(), radius_ * std::abs(difference));
 }
 
 Eigen::Vector2d ParametrizedCircularArc::DoubleDerivative(double t) const {

@@ -53,7 +53,7 @@ std::string path = "/home/diego/Uni/Thesis/HelmholtzBEM/raw_data/double_layer_i_
 
 TEST(DoubleLayerTest, compare_row) {
     // compute operator and extract first row
-    builder.assembleDoubleLayer(k, c_i);
+    builder.assembleDense(k, c_i, LayerType::DOUBLE);
     K = builder.getDoubleLayer().block(0,0,1,numpanels).transpose();
     // read first row of operator from file
     fp_data.open(path);

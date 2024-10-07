@@ -19,37 +19,6 @@
 namespace sol {
 
     /**
-     * This function computes the derivative of the bessel function of order \p n at \p x.
-     * @param n order of bessel function for which to compute derivative
-     * @param x point at which to evaluate
-     * @return value of derivative of bessel function of order \p n at point \p x
-     */
-    std::complex<double> jn_der(int n,
-                                double x);
-
-    /**
-     * This function takes the order \p n and a point \p x on the real axis
-     * and returns the value of the first kind Hankel function of
-     * <tt>n</tt>-th order at the point \p x.
-     * @param n order of Hankel function to be computed
-     * @param x point at which to evaluate
-     * @return value of first kind Hankel function of order n at point x
-     */
-    std::complex<double> hn(int n,
-                            double x);
-
-    /**
-     * This function takes the order \p n and a point \p x on the real axis
-     * and returns the value of the derivative of the first kind Hankel function of
-     * <tt>n</tt>-th order at the point \p x.
-     * @param n order of Hankel function to be computed
-     * @param x point at which to evaluate
-     * @return value of the derivative of the first kind Hankel function of order n at point x
-     */
-    std::complex<double> hn_der(int n,
-                                double x);
-
-    /**
      * This function takes a wavenumber \p k, two points in \f$ \mathbb{R}^2 \f$ defined by \p x1, \p x2
      * and \p ipt1, \p ipt2 and returns the value of the Dirichlet data of the fundamental
      * solution to the Helmholtz equation with the interior evaluation point defined
@@ -62,7 +31,7 @@ namespace sol {
      * @return Dirichlet data of fundamental solution to the Helmholtz equation
      * with interior evaluation point defined by \p ipt1, \p ipt2 at point definde by \p x1, \p x2
      */
-    std::complex<double> fund_sol_dir(double k,
+    std::complex<double> fund_sol_dir(const std::complex<double> &k,
             double x1,
             double x2,
             double ipt1,
@@ -81,7 +50,7 @@ namespace sol {
      * @return Neumann data of fundamental solution to the Helmholtz equation
      * with interior evaluation point defined by \p ipt1, \p ipt2 at point definde by \p x1, \p x2
      */
-    std::complex<double> fund_sol_neu(double k,
+    std::complex<double> fund_sol_neu(const std::complex<double> &k,
             double x1,
             double x2,
             double ipt1,
@@ -100,7 +69,7 @@ namespace sol {
      */
     std::complex<double> r_coeff(int n,
                                  double r,
-                                 double k,
+                                 const std::complex<double> &k,
                                  double n_i);
 
     /**
@@ -116,7 +85,7 @@ namespace sol {
      */
     std::complex<double> t_coeff(int n,
                                  double eps,
-                                 double k,
+                                 const std::complex<double> &k,
                                  double n_i);
 
     /**
@@ -134,7 +103,7 @@ namespace sol {
                              double x2,
                              int l,
                              double *a_n,
-                             double k);
+                             const std::complex<double> &k);
 
     /**
      * Evaluates a wave scattered by a 2-dimensional ball of radius \p eps
@@ -156,7 +125,7 @@ namespace sol {
                              int l,
                              double eps,
                              double *a_n,
-                             double k,
+                             const std::complex<double> &k,
                              double n_i);
 
     /**
@@ -179,7 +148,7 @@ namespace sol {
                              int l,
                              double eps,
                              double *a_n,
-                             double k,
+                             const std::complex<double> &k,
                              double n_i);
 
     /**
@@ -197,12 +166,12 @@ namespace sol {
                                  double x2,
                                  int l,
                                  double *a_n,
-                                 double k);
+                                 const std::complex<double> &k);
     Eigen::Vector2cd u_i_del(double x1,
                             double x2,
                             int l,
                             double *a_n,
-                            double k);
+                            const std::complex<double> &k);
 
     /**
      * Evaluates Neumann data of a wave scattered by a 2-dimensional ball of radius \p eps
@@ -224,7 +193,7 @@ namespace sol {
                                  int l,
                                  double eps,
                                  double *a_n,
-                                 double k,
+                                 const std::complex<double> &k,
                                  double n_i);
 
     /**
@@ -247,7 +216,7 @@ namespace sol {
                                  int l,
                                  double eps,
                                  double *a_n,
-                                 double k,
+                                 const std::complex<double> &k,
                                  double n_i);
 }
 #endif //ADVNUMCSE_GENERATE_SOLUTION_H

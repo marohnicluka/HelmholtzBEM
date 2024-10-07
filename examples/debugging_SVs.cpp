@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
             };
             file_out << "n = " << j+1 << " : ";
             for (int l = 0; l < 3; l++) {
-                builder.assembleSingleLayer(k[l], c_o);
+                builder.assembleDense(k[l], c_o, LayerType::SINGLE);
                 Eigen::MatrixXcd V = builder.getSingleLayer();
                 Eigen::VectorXcd par_exp_N = cont_space.Interpolate_helmholtz(par_exp_n,mesh);
                 file_out << par_exp_N.conjugate().transpose()*V*par_exp_N << " ";
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
             };
             file_out << "n = " << j+1 << " : ";
             for (int l = 0; l < 3; l++) {
-                builder.assembleDoubleLayer(k[l], c_o);
+                builder.assembleDense(k[l], c_o, LayerType::DOUBLE);
                 Eigen::MatrixXcd K = builder.getDoubleLayer();
                 Eigen::VectorXcd par_exp_N = cont_space.Interpolate_helmholtz(par_exp_n,mesh);
                 file_out << par_exp_N.conjugate().transpose()*K*par_exp_N << " ";
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
             };
             file_out << "n = " << j+1 << " : ";
             for (int l = 0; l < 3; l++) {
-                builder.assembleHypersingular(k[l], c_o);
+                builder.assembleDense(k[l], c_o, LayerType::HYPERSINGULAR);
                 Eigen::MatrixXcd W = builder.getHypersingular();
                 Eigen::VectorXcd par_exp_N = cont_space.Interpolate_helmholtz(par_exp_n,mesh);
                 file_out << par_exp_N.conjugate().transpose()*W*par_exp_N << " ";

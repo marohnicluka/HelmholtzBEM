@@ -29,18 +29,18 @@ typedef complex<double> complex_t;
 
 namespace incoming {
 
-    enum WaveType { Plane, CircularJ, CircularY, FourierHankel1, FourierHankel2, Herglotz };
+    enum class WaveType { Plane, CircularJ, CircularY, FourierHankel1, FourierHankel2, Herglotz };
 
     typedef struct {
-        int type;
+        WaveType type;
         double amplitude;
         double eps;
         double angle;
         int order;
         Eigen::Vector2d x0;
-    } wave_params;
+    } wavespec_t;
 
-    typedef vector<wave_params> wave;
+    typedef vector<wavespec_t> wave;
 
     /**
      * This function loads incoming wave from a file.

@@ -17,6 +17,7 @@
 #include <numeric>
 #include <execution>
 #include <chrono>
+#include <tuple>
 #include <boost/math/quadrature/gauss_kronrod.hpp>
 
 #define MAX_ITER_ALPHA 5000
@@ -275,62 +276,89 @@ namespace scatterer {
         return res;
     }
 
-    bool inside_mesh(const ParametrizedMesh &mesh, const Eigen::Vector2d &p) {
-        bool c = false;
-        unsigned i, n = mesh.getNumPanels(), m = 0, ic;
-        std::vector<unsigned int> pi;
-        pi.reserve(n);
-        for (i = 0; i < n; ++i) {
-            const auto &panel = *mesh.getPanels()[i];
-            auto p1 = panel[0], p2 = panel[1];
-            double x = p(0), y = p(1), x1 = p1(0), x2 = p2(0), y1 = p1(1), y2 = p2(1);
-            if ((((y1 <= y) && (y < y2)) || ((y2 <= y) && (y < y1))) &&
-                (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1))
-                c = !c;
-            if (!panel.isLineSegment() && (p2 - p1).dot(p - p1) > 0 && (p1 - p2).dot(p - p2) > 0) {
-                // additional check, whether p is between straight line and panel curve
-                double s = (y2 - y1) / (x2 - x1), si = 1. / s;
-                Eigen::Vector2d cp;
-                cp(0) = (y + si * x - y1 + s * x1) / (s + si);
-                cp(1) = s * (cp(0) - x1) + y1;
-                double t0 = (cp - p1).norm() / (p2 - p1).norm();
-                std::function<double(double)> f = [&](double t) {
-                    auto pt = panel[t];
-                    return std::pow(pt(1) + si * (pt(0) - x) - y, 2);
-                };
-                double t_min = brent_gsl_with_values(0, std::pow(y1 + si * (x1 - x) - y, 2), 1, std::pow(y2 + si * (x2 - x) - y, 2), t0, f(t0), f, 1e-6, ic);
-                auto p_min = panel[t_min];
-                double d = (cp - p_min).squaredNorm();
-                if ((p - cp).squaredNorm() <= d && (p - p_min).squaredNorm() <= d)
-                    ++m;
-            }
-        }
-        return m % 2 ? !c : c;
+    double panel_line_distance(const AbstractParametrizedCurve &panel, const Eigen::Vector2d &p, double *t_min) {
+        Eigen::Vector2d p1 = panel[0], p2 = panel[1], h = p2 - p1;
+        double t = std::max(0., std::min(1., ((p - p1).transpose() * h)(0) / h.squaredNorm()));
+        Eigen::Vector2d proj = p1 + t * h;
+        if (t_min) *t_min = t;
+        return (p - proj).norm();
     }
 
-    double panel_distance(const ParametrizedMesh &mesh, unsigned i, const Eigen::Vector2d &p, double *t0) {
-        assert(i < mesh.getNumPanels());
-        const auto &panel = *mesh.getPanels()[i];
-        Eigen::Vector2d p1 = panel[0], p2 = panel[1], h = p2 - p1;
-        double t = fmax(0, fmin(1, ((p - p1).transpose() * h)(0) / h.squaredNorm()));
-        Eigen::Vector2d proj = p1 + t * h;
-        double d = (p - proj).norm();
-        if (t0 != NULL)
-            *t0 = t;
-        return d;
+    bool inside_mesh(const ParametrizedMesh &mesh, const Eigen::Vector2d &p) {
+        bool c = false;
+        size_t npanels = mesh.getNumPanels(), n = 0;
+        std::vector<size_t> ind(npanels);
+        std::iota(ind.begin(), ind.end(), 0);
+        std::for_each (ind.cbegin(), ind.cend(), [&](size_t i) {
+            const auto &panel = *mesh.getPanels()[i];
+            auto p1 = panel[0], p2 = panel[1];
+            double x = p(0), y = p(1), x1 = p1(0), x2 = p2(0), y1 = p1(1), y2 = p2(1), d, tc;
+            if ((((y1 <= y) && (y < y2)) || ((y2 <= y) && (y < y1))) && (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1))
+                c = !c;
+            if (panel.isLineSegment() || (p2 - p1).dot(p - p1) <= 0 || (p1 - p2).dot(p - p2) <= 0 || panel_line_distance(panel, p, &tc) > 2.0 * panel.length())
+                return;
+            /** check whether p is between straight line and panel curve */
+            double s = (x2 - x1) / (y2 - y1);
+            Eigen::Vector2d cp = p1 + tc * (p2 - p1);
+            std::function<double(double)> f = [&](double t) {
+                auto pt = panel[t];
+                return std::pow(pt(1) + s * (pt(0) - x) - y, 2);
+            };
+            unsigned ic;
+            double t_min = brent_gsl_with_values(0, std::pow(y1 + s * (x1 - x) - y, 2), 1, std::pow(y2 + s * (x2 - x) - y, 2), tc, f(tc), f, 1e-6, ic);
+            auto p_min = panel[t_min];
+            d = (cp - p_min).squaredNorm();
+            if ((p - cp).squaredNorm() < d && (p - p_min).squaredNorm() < d)
+                ++n;
+        });
+        return n % 2 ? !c : c;
+    }
+
+    double panel_distance(const AbstractParametrizedCurve &panel, const Eigen::Vector2d &p, double *t0) {
+        double t_min, d = panel_line_distance(panel, p, &t_min);
+        if (panel.isLineSegment()) {
+            if (t0) *t0 = t_min;
+            return d;
+        }
+        /** for a non-linear panel, find the nearest point using Brent minimizer */
+        std::function<double(double)> f = [&](double t) { return (p - panel[t]).squaredNorm(); };
+        d = f(t_min);
+        double d0 = (p - panel[0]).squaredNorm(), d1 = (p - panel[1]).squaredNorm(), t_res;
+        double eps_mach = std::numeric_limits<double>::epsilon();
+        unsigned ic;
+        if (d0 <= d + eps_mach || d1 <= d + eps_mach) {
+            d = d0 <= d1 ? d0 : d1;
+            t_res = d0 <= d1 ? 0 : 1;
+        } else t_res = brent_gsl_with_values(0, d0, 1, d1, t_min, d, f, 1e-6, ic);
+        if (std::isnan(t_res)) { /** Brent failed */
+#ifdef CMDL
+            std::cerr << "Warning: failed to compute panel distance using Brent method, returning initial approximation" << std::endl;
+#endif
+            t_res = t_min;
+        } else d = (p - panel[t_res]).squaredNorm();
+        if (t0) *t0 = std::max(0., std::min(1., t_res));
+        return std::sqrt(d);
     }
 
     double distance(const ParametrizedMesh &mesh, const Eigen::Vector2d &p, unsigned *i, double *t0) {
         unsigned N = mesh.getNumPanels();
-        double min_d = -1., d, t;
-        for (unsigned j = 0; j < N; ++j) {
-            d = panel_distance(mesh, j, p, &t);
-            if (min_d < 0. || d < min_d) {
+        std::vector<std::pair<double,double> > dt(N);
+        std::vector<size_t> ind(N);
+        std::iota(ind.begin(), ind.end(), 0);
+        std::transform (std::execution::par, ind.cbegin(), ind.cend(), dt.begin(), [&](size_t j) {
+            double d, t;
+            d = panel_distance(*mesh.getPanels()[j], p, &t);
+            return std::make_pair(d, t);
+        });
+        double min_d = std::numeric_limits<double>::infinity();
+        for (auto j : ind) {
+            double d = dt[j].first, t = dt[j].second;
+            if (d < min_d) {
                 min_d = d;
-                if (t0 != NULL)
-                    *t0 = t;
                 if (i != NULL)
                     *i = j;
+                if (t0 != NULL)
+                    *t0 = t;
             }
         }
         return min_d;

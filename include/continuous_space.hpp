@@ -67,14 +67,16 @@
         Eigen::VectorXcd Interpolate_helmholtz(const std::function<std::complex<double>(double, double)> &func,
                                                const ParametrizedMesh &mesh) const {
             // The output vector
-            unsigned numpanels = getSpaceDim(mesh.getNumPanels());
+            unsigned numpanels = mesh.getNumPanels();
             unsigned coeffs_size = getSpaceDim(numpanels);
             Eigen::VectorXcd coeffs(coeffs_size);
             const PanelVector &panels = mesh.getPanels();
             // Filling the coefficients
             for (unsigned i = 0; i < numpanels; ++i) {
                 Eigen::Vector2d pt = panels[i]->operator[](0);
-                coeffs(i) = func(pt(0), pt(1));
+                auto fval = func(pt(0), pt(1));
+                assert(!std::isnan(fval.real()) && !std::isnan(fval.imag()));
+                coeffs(i) = fval;
             }
             return coeffs;
         }
@@ -91,7 +93,9 @@
                 const auto &p = *panels[i];
                 Eigen::Vector2d pt = p[0], tangent = p.Derivative_01(0), normal_o;
                 normal_o << tangent(1), -tangent(0);
-                coeffs(i) = normal_o.normalized().dot(func(pt(0), pt(1)));
+                auto fval = func(pt(0), pt(1));
+                assert(fval.real().allFinite() && fval.imag().allFinite());
+                coeffs(i) = normal_o.normalized().dot(fval);
             }
             return coeffs;
         }

@@ -7,7 +7,7 @@ Current Build Directory Index-Host System=0
 
 [CMake][CMake Build Directory 0]
 Build Directory Path=/home/luka/Projects/PMF/HelmholtzBEM/build
-Build Type=Release
+Build Type=Debug
 CMake Binary=/usr/bin/cmake
 CMake Executable=/usr/bin/cmake
 Environment Profile=

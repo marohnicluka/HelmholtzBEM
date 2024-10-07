@@ -19,8 +19,11 @@ add_library(randomized_svd STATIC randsvd.cpp)
 
 add_library(incoming STATIC incoming.cpp)
 
+add_library(h2lib_interface h2lib_interface.cpp)
+target_link_libraries(h2lib_interface h2 openblas)
+
 add_library(hierarchical_matrix STATIC hmatrix.cpp)
-target_link_libraries(hierarchical_matrix parametrizations tbb)
+target_link_libraries(hierarchical_matrix parametrizations h2lib_interface tbb)
 
 add_library(scatterer STATIC scatterer.cpp)
 target_link_libraries(scatterer parametrizations complex_spline quadrature find_roots tbb)

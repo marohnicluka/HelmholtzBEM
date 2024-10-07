@@ -28,6 +28,7 @@
 #include <string>
 #include <fstream>
 #include "parametrized_circular_arc.hpp"
+#include "parametrized_line.hpp"
 #include "solvers.hpp"
 #include "gen_sol.hpp"
 #include "cbessel.hpp"
@@ -55,6 +56,7 @@ int main(int argc, char** argv) {
     int bessel_order = atoi(argv[2]);
     double c_i = atof(argv[3]);
     double c_o = atof(argv[4]);
+    //std::complex<double> k(atof(argv[5]), 1.0);
     double k = atof(argv[5]);
 
     // define number of panels, grid size and order of quadrature rule
@@ -67,7 +69,14 @@ int main(int argc, char** argv) {
     auto origin = Eigen::Vector2d(0,0);
     ParametrizedCircularArc circle(origin, radius, 0, 2*M_PI);
     PanelVector panels = circle.split(numpanels);
+#if 0 // make linear panels
+    for (auto &p : panels) {
+        p = std::make_shared<ParametrizedLine>(p->operator[](0), p->operator[](1));
+    }
+#endif
     ParametrizedMesh mesh(panels);
+    if (mesh.isPolygonal())
+        std::cout << "Working with polygonal mesh" << std::endl;
 
     // generate output filename with set parameters
     std::string base_name = "file_verify_solution_analytic_error_";
@@ -112,18 +121,16 @@ int main(int argc, char** argv) {
 
     Eigen::ArrayXXd grid_X, grid_Y;
     Eigen::Vector2d lower_left_corner(-1., -1.), upper_right_corner(1., 1.);
-    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 11, order, k, c_o, c_i,
+    Eigen::ArrayXXcd S = tp::direct_second_kind::solve_in_rectangle(mesh, u_inc, u_inc_del, 10, order, k, c_o, c_i,
                                                                     lower_left_corner, upper_right_corner, grid_size, grid_size,
                                                                     grid_X, grid_Y, false);
 
     // compute analytic solution in [-1,1]^2
-    double step_x = (upper_right_corner(0) - lower_left_corner(0)) / (grid_size - 1.);
-    double step_y = (upper_right_corner(1) - lower_left_corner(1)) / (grid_size - 1.);
     Eigen::ArrayXXcd S_a(grid_size, grid_size);
     for (unsigned ii = 0; ii < grid_size; ++ii) {
         for (unsigned jj = 0; jj < grid_size; ++jj) {
             Eigen::Vector2d x;
-            x << lower_left_corner(0) + ii * step_x, lower_left_corner(1) + jj * step_y;
+            x << grid_X(ii, jj), grid_Y(ii, jj);
             double r = x.norm();
             S_a(ii, jj) = r <= radius ? sol::u_t(x(0), x(1), bessel_order, radius, a_n, k, c_i)
                                       : sol::u_s(x(0), x(1), bessel_order, radius, a_n, k, c_i);
@@ -162,7 +169,7 @@ int main(int argc, char** argv) {
     }
     for (unsigned ii = 0; ii < grid_size; ++ii) {
         for (unsigned jj = 0; jj < grid_size; ++jj)
-            file_out << lower_left_corner(0) + ii * step_x << '\t' << lower_left_corner(1) + jj * step_y << '\t' << err(ii, jj) << std::endl;
+            file_out << grid_X(ii, jj) << '\t' << grid_Y(ii, jj) << '\t' << err(ii, jj) << std::endl;
         file_out << std::endl;
     }
     file_out.close();

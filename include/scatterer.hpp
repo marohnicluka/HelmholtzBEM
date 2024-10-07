@@ -92,37 +92,44 @@ namespace scatterer {
     void print_panels_info(const PanelVector &panels);
 
     /**
-    * This function returns true if p is inside
-    * the polygonal mesh and false otherwise.
+    * @brief Check whether the point @p p is inside @p mesh.
     *
     * @param mesh parametrized panel mesh
     * @param p point
+    * @param np pointer to list of nearest panel points as parameter values
+    * @param dist pointer to mesh distance (default: NULL)
+    * @param pi index of the nearest panel (default: NULL)
+    * @return @p true if @p p is inside @p mesh, @p false otherwise
     */
     bool inside_mesh(const ParametrizedMesh &mesh, const Eigen::Vector2d &p);
 
     /**
-    * This function returns the distance from p
-    * to the i-th panel of the polygonal mesh.
+    * @brief Return the distance between point @p p and @p panel.
+    * The parameter value corresponding to the nearest point will
+    * be written to @p t0.
     *
-    * @param mesh parametrized panel mesh
-    * @param i panel index
+    * @param panel parametrized panel
     * @param p point
-    * @param t0 pointer to the position of the projection of p onto the i-th panel
+    * @param t0 pointer to the optimal parameter value (default: NULL)
+    * @return distance between @p p and @p panel.
     */
-    double panel_distance(const ParametrizedMesh &mesh, unsigned i, const Eigen::Vector2d &p, double *t0 = NULL);
+    double panel_distance(const AbstractParametrizedCurve &panel, const Eigen::Vector2d &p, double *t0 = NULL);
+
+    double panel_line_distance(const AbstractParametrizedCurve &panel, const Eigen::Vector2d &p, double *t_min = NULL);
 
     /**
-    * This function returns the distance from p
-    * to the polygonal mesh. If i and/or t0 are not
-    * NULL, they will be filled with the index of
-    * the nearest panel and the parameter value
-    * corresponding to the nearest point on that
-    * panel, respectively.
+    * @brief Return the distance from @p p to the polygonal
+    * @p mesh. If @p i and/or @p t0 are not NULL, they will
+    * be filled with the index of the nearest panel and the
+    * parameter value corresponding to the nearest point on
+    * that panel, respectively.
+    * This function is multithreaded.
     *
     * @param mesh parametrized panel mesh
-    * @param i panel index
+    * @param i pointer to the resulting panel index
     * @param p point
-    * @param t0 pointer to the position of the projection of p onto the i-th panel
+    * @param t0 pointer to the optimal parameter value
+    * @return distance between @p p and @p mesh.
     */
     double distance(const ParametrizedMesh &mesh, const Eigen::Vector2d &p, unsigned *i = NULL, double *t0 = NULL);
 

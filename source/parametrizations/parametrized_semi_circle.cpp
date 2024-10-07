@@ -46,7 +46,7 @@ void ParametrizedSemiCircle::Derivative(const Eigen::ArrayXXd &t, Eigen::ArrayXX
   assert(IsWithinParameterRange(t));
   // Derivative of the polar coordinaties used in the function operator()
   res = 1i * radius_ * M_PI_2 * (1i * M_PI_2 * t).exp();
-  norm = res.cwiseAbs();
+  norm.setConstant(t.rows(), t.cols(), radius_ * M_PI_2);
 }
 
 Eigen::Vector2d ParametrizedSemiCircle::DoubleDerivative(double t) const {

@@ -19,8 +19,8 @@ class SolutionsOperator
     bool do_projection;
     Eigen::PartialPivLU<Eigen::MatrixXcd> lu;
     Eigen::MatrixXd M; // mass matrix
-    Eigen::MatrixXcd K_i, K_o, V_i, V_o, W_i, W_o;
     size_t dim_test, dim_trial;
+    Eigen::MatrixXcd K_i, K_o, V_i, V_o, W_i, W_o;
     // solutions operator matrix assembly routines
     void gen_sol_op_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                        Eigen::MatrixXcd &T);
@@ -28,7 +28,9 @@ class SolutionsOperator
                                Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der);
     void gen_sol_op_2nd_der_in(GalerkinBuilder &builder, const std::complex<double> &k, double c_o, double c_i,
                                Eigen::MatrixXcd &T, Eigen::MatrixXcd &T_der, Eigen::MatrixXcd &T_der2);
-
+    void assemble_operator(Eigen::MatrixXcd &T, bool mass,
+                           const Eigen::MatrixXcd &K_i, const Eigen::MatrixXcd &W_i, const Eigen::MatrixXcd &V_i,
+                           const Eigen::MatrixXcd &K_o, const Eigen::MatrixXcd &W_o, const Eigen::MatrixXcd &V_o) const;
 public:
     /**
      * Initialize solutions operator class.

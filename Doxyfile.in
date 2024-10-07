@@ -1,0 +1,18 @@
+# Doxyfile.in
+# Doxygen configuration file
+
+# Input directory for source files
+INPUT = @DOXYGEN_INPUT@
+
+# Enables recursive search into subdirectories
+RECURSIVE = @DOXYGEN_RECURSIVE@
+
+# Generate HTML documentation
+GENERATE_HTML = @DOXYGEN_GENERATE_HTML@
+
+# Output directory for documentation
+OUTPUT_DIRECTORY = @DOXYGEN_OUTPUT_DIRECTORY@
+
+# Whether to typeset with LaTeX
+ENABLE_LATEX = @DOXYGEN_ENABLE_LATEX@
+USE_MDFILE_AS_MAINPAGE = @DOXYGEN_USE_MDFILE_AS_MAINPAGE@

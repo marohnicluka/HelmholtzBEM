@@ -10,14 +10,14 @@
  */
 
 #include "cbessel.hpp"
-#include <limits>
-#include <vector>
+#include <iostream>
 #include <numeric>
+#include <limits>
 #include <cmath>
 
-//#define USE_STD_BESSEL 1
-//#define SIN_REDUCE_TO_PI_2
+#define USE_STD_BESSEL 1
 #define LIMITING_FORMS_THRESHOLD 1e-8
+//#define SIN_REDUCE_TO_PI_2
 
 #define HI(x) *(1+(int*)&x) // assuming little-endian
 
@@ -355,7 +355,7 @@ namespace complex_bessel {
         }
 #ifdef USE_STD_BESSEL
         if (zero(abs(2.0*arg(z)-M_PI)))
-            return cyl_bessel_j(v,imag(z))*exp(i*v*M_PI_2);
+            return cyl_bessel_j(v,imag(z))*exp(1i*v*M_PI_2);
 #endif
         /* Basic case: Re(z)>=0, v>=0 */
         Cplx z2=2.0/z;
@@ -677,7 +677,7 @@ namespace complex_bessel {
             return -I1_in(-z,scaled);
 #ifdef USE_STD_BESSEL
         if (zero(abs(2.0*arg(z)-M_PI)))
-            return cyl_bessel_j(1.0,imag(z))*i;
+            return cyl_bessel_j(1.0,imag(z))*1i;
 #endif
         /* Basic case: Re(z)>=0, v>=0 */
         Cplx z2=2.0/z;
@@ -1086,8 +1086,8 @@ namespace complex_bessel {
         Cplx si=sign1(imag(z))*1i;
 #ifdef USE_STD_BESSEL
         if (!scaled && zero(z.imag()) && z.real()>0) {
-            if (zero(std::round(v)-v))
-                return jn((int)std::round(v),z.real());
+            if (zero(round(v)-v))
+                return jn((int)round(v),z.real());
             return cyl_bessel_j(v,z.real());
         }
 #endif
@@ -1106,8 +1106,8 @@ namespace complex_bessel {
     Cplx BesselY(Real v,const Cplx &z,bool scaled) {
 #ifdef USE_STD_BESSEL
         if (!scaled && zero(imag(z)) && z.real()>0 && v>=0.0) {
-            if (zero(std::round(v)-v))
-                return yn((int)std::round(v),z.real());
+            if (zero(round(v)-v))
+                return yn((int)round(v),z.real());
             return cyl_neumann(v,z.real());
         }
 #endif
@@ -1301,20 +1301,6 @@ namespace complex_bessel {
             return H_v1(z,2,scaled);
         }
         return H(v,z,2,scaled);
-    }
-
-    void H1_01(Real x, Cplx &h0, Cplx &h1) {
-        Real j_0,y_0,j_1,y_1;
-        JY_01(x,j_0,y_0,j_1,y_1);
-        h0=j_0+1i*y_0;
-        h1=j_1+1i*y_1;
-    }
-
-    void iH1_01(Real x, Cplx &h0, Cplx &h1) {
-        Real j_0,y_0,j_1,y_1;
-        JY_01(x,j_0,y_0,j_1,y_1);
-        h0=1i*j_0-y_0;
-        h1=1i*j_1-y_1;
     }
 
     /* n-th derivative of Bessel function f_v(z) */
@@ -1731,9 +1717,11 @@ namespace complex_bessel {
         ind_limit.reserve(n_elem);
         ind_small.reserve(n_elem);
         ind_normal.reserve(n_elem);
+        ind_large.reserve(n_elem);
         x_limit.resize(n_elem,1);
         x_small.resize(n_elem,1);
         x_normal.resize(n_elem,1);
+        x_large.resize(n_elem,1);
         j0_limit.resize(n_elem,1);
         j0_small.resize(n_elem,1);
         j1_small.resize(n_elem,1);
@@ -1771,12 +1759,12 @@ namespace complex_bessel {
 #ifdef SIN_REDUCE_TO_PI_2
         xt=1.-xt.cwiseAbs();
         xx+=xt+xt-1.;
-        nsin(xt,xx,c); // compute r=cos(x)
+        nsin(xt,xx,c); // compute c=cos(x)
         c=(tmsk1 || tmsk2).select(-c,c);
 #else
         xt=.5-xt.cwiseAbs();
         xx+=xt-.25;
-        nsin(xt,xx,c); // compute r=cos(x)
+        nsin(xt,xx,c); // compute c=cos(x)
 #endif
     }
 
@@ -1806,7 +1794,7 @@ namespace complex_bessel {
             k+=1.0;
             j_1+=t/k;
             y_1-=(Hk/k)*t;
-        } while (Hk*std::abs(t(max_i,max_j))>eps && k<=maxiter);
+        } while (Hk*abs(t(max_i,max_j))>eps && k<=maxiter);
         j_1*=x*0.5;
         ws[0]=(x*0.5).log()-D[9];
         y_0+=ws[0]*j_0;
@@ -1856,6 +1844,17 @@ namespace complex_bessel {
         y_1=v2*s-u2*c;
     }
 
+    void Hankel1Real01::compute_large(const RealArray &x,RealArray &j_0,RealArray &j_1,RealArray &y_0,RealArray &y_1) {
+        j_0=j_1=y_0=y_1=(M_2_PI/x).cwiseSqrt();
+        auto &xt=ws[0],&xx=ws[1],&s=ws[2],&c=ws[3];
+        s.resize(x.rows(),x.cols());
+        c.resize(x.rows(),x.cols());
+        sin_cos(x-M_PI_4,xt,xx,s,c);
+        j_0*=c,y_0*=s;
+        sin_cos(x-3*M_PI_4,xt,xx,s,c);
+        j_1*=c,y_1*=s;
+    }
+
     void Hankel1Real01::jy_01(const RealArray &x,RealArray &j_0,RealArray &y_0,RealArray &j_1,RealArray &y_1) {
 #if 0
         if (x.minCoeff()>=50.) { // Paper: 10.1109/ARITH.2009.32
@@ -1885,13 +1884,15 @@ namespace complex_bessel {
         }
 #endif
         size_t i,j,k;
-        n_limit=n_small=n_normal=n_zero=0;
+        n_limit=n_small=n_normal=n_large=n_zero=0;
         ind_limit.clear();
         ind_small.clear();
         ind_normal.clear();
+        ind_large.clear();
         x_limit.conservativeResize(n_elem,Eigen::NoChange);
         x_small.conservativeResize(n_elem,Eigen::NoChange);
         x_normal.conservativeResize(n_elem,Eigen::NoChange);
+        x_large.conservativeResize(n_elem,Eigen::NoChange);
         for (j=0;j<_n;++j) {
             for (i=0;i<_m;++i) {
                 Real xij=x(i,j);
@@ -1903,6 +1904,9 @@ namespace complex_bessel {
                 } else if (xij<8.) { // small (x<8)
                     ind_small.push_back({i,j});
                     x_small(n_small++,0)=xij;
+                } else if (xij>1e6) { // large (x>1e6)
+                    ind_large.push_back({i,j});
+                    x_large(n_large++,0)=xij;
                 } else { // normal (x>=8)
                     ind_normal.push_back({i,j});
                     x_normal(n_normal++,0)=xij;
@@ -1913,10 +1917,12 @@ namespace complex_bessel {
             compute_limit(x,j_0,j_1,y_0,y_1);
         } else if (n_small+n_zero==n_elem) {
             compute_small(x,j_0,j_1,y_0,y_1);
+        } else if (n_large+n_zero==n_elem) {
+            compute_large(x,j_0,j_1,y_0,y_1);
         } else if (n_normal+n_zero==n_elem) {
             compute_normal(x,j_0,j_1,y_0,y_1);
         } else {
-            std::vector<std::pair<size_t,size_t> >::const_iterator it;
+            vector<pair<size_t,size_t> >::const_iterator it;
             if (n_limit>0) {
                 x_limit.conservativeResize(n_limit,Eigen::NoChange);
                 j0_limit.conservativeResize(n_limit,Eigen::NoChange);
@@ -1944,6 +1950,17 @@ namespace complex_bessel {
                     y_1(i,j)=y1_small(k,0);
                 }
             }
+            if (n_large>0) {
+                x_large.conservativeResize(n_large,Eigen::NoChange);
+                compute_large(x_large,j0_large,j1_large,y0_large,y1_large);
+                for (k=0,it=ind_large.begin();k<n_large;++k,++it) {
+                    i=it->first,j=it->second;
+                    j_0(i,j)=j0_large(k,0);
+                    j_1(i,j)=j1_large(k,0);
+                    y_0(i,j)=y0_large(k,0);
+                    y_1(i,j)=y1_large(k,0);
+                }
+            }
             if (n_normal>0) {
                 x_normal.conservativeResize(n_normal,Eigen::NoChange);
                 compute_normal(x_normal,j0_normal,j1_normal,y0_normal,y1_normal);
@@ -1968,8 +1985,8 @@ namespace complex_bessel {
             if (x(i,j)<=0)
                 continue;
             Real J0=j0(x(i,j)),Y0=y0(x(i,j)),J1=j1(x(i,j)),Y1=y1(x(i,j));
-            err(i,j)=std::abs(j_0(i,j)-J0)/(1.+std::abs(J0))+std::abs(j_1(i,j)-J1)/(1.+std::abs(J1))+
-                     std::abs(y_0(i,j)-Y0)/(1.+std::abs(Y0))+std::abs(y_1(i,j)-Y1)/(1.+std::abs(Y1));
+            err(i,j)=abs(j_0(i,j)-J0)/(1.+abs(J0))+abs(j_1(i,j)-J1)/(1.+abs(J1))+
+                     abs(y_0(i,j)-Y0)/(1.+abs(Y0))+abs(y_1(i,j)-Y1)/(1.+abs(Y1));
         }
         bessel_accuracy += err.sum();
         bessel_eval_count += (n_elem-n_zero) * 4;
@@ -1980,32 +1997,23 @@ namespace complex_bessel {
     }
     void print_bessel_stats() {
 #ifdef COMPUTE_BESSEL_STATS
-        std::cout << "*** Bessel Statistic ***" << std::endl;
-        std::cout << "Bessel evaluations: " << bessel_eval_count << std::endl;
-        std::cout << "Limit / Small / Normal: " << (double(bessel_eval_count_limit) / double(bessel_eval_count)) * 100. << "%, "
+        cout << "*** Bessel Statistic ***" << endl;
+        cout << "Bessel evaluations: " << bessel_eval_count << endl;
+        cout << "Limit / Small / Normal: " << (double(bessel_eval_count_limit) / double(bessel_eval_count)) * 100. << "%, "
                                                 << (double(bessel_eval_count_small) / double(bessel_eval_count)) * 100. << "%, "
-                                                << (double(bessel_eval_count_normal) / double(bessel_eval_count)) * 100. << "%" << std::endl;
-        std::cout << "Mean accuracy: " << bessel_accuracy / double(bessel_eval_count) << std::endl;
-        std::cout << "Trig accuracy: " << trig_accuracy / double(trig_eval_count) << std::endl;
-#else
-        ;
+                                                << (double(bessel_eval_count_normal) / double(bessel_eval_count)) * 100. << "%" << endl;
+        cout << "Mean accuracy: " << bessel_accuracy / double(bessel_eval_count) << endl;
+        cout << "Trig accuracy: " << trig_accuracy / double(trig_eval_count) << endl;
 #endif
+        return;
     }
 
     void Hankel1Real01::h1_01(const RealArray& x,ComplexArray& h1_0,ComplexArray& h1_1) {
-        assert(x.rows()==_m && x.cols==_n && h1_0.rows()==_m && h1_0.cols()==_n && h1_1.rows()==_m && h1_1.cols()==_n);
+        assert(x.rows()==_m && x.cols()==_n);
         auto &j_0=ws[9],&y_0=ws[10],&j_1=ws[11],&y_1=ws[12];
         jy_01(x,j_0,y_0,j_1,y_1);
         h1_0=j_0+1i*y_0;
         h1_1=j_1+1i*y_1;
-    }
-
-    void Hankel1Real01::ih1_01(const RealArray& x,ComplexArray& ih1_0,ComplexArray& ih1_1) {
-        assert(x.rows()==_m && x.cols==_n && h1_0.rows()==_m && h1_0.cols()==_n && h1_1.rows()==_m && h1_1.cols()==_n);
-        auto &j_0=ws[9],&y_0=ws[10],&j_1=ws[11],&y_1=ws[12];
-        jy_01(x,j_0,y_0,j_1,y_1);
-        ih1_0=1i*j_0-y_0;
-        ih1_1=1i*j_1-y_1;
     }
 
     Real pzero(Real x) {
@@ -2069,7 +2077,7 @@ namespace complex_bessel {
         } else if (x<LIMITING_FORMS_THRESHOLD) { // use limiting forms
             j_0=1.0;
             j_1=.5*x;
-            y_0=M_2_PI*(std::log(x)-D[9]);
+            y_0=M_2_PI*(log(x)-D[9]);
             y_1=-M_2_PI/x;
         } else {
             Real z,s,c,ss,cc,r,u,v,logx;
@@ -2129,111 +2137,31 @@ namespace complex_bessel {
         }
     }
 
-    void Hankel1Real01Interp::make_splines() {
-        unsigned N=data.size(),i;
-        Real x;
-        x_j0.resize(N); x_j1.resize(N); x_y0.resize(N); x_y1.resize(N);
-        y_j0.resize(N); y_j1.resize(N); y_y0.resize(N); y_y1.resize(N);
-        dy_j0.resize(N); dy_j1.resize(N); dy_y0.resize(N); dy_y1.resize(N);
-        d2y_j0.resize(N); d2y_j1.resize(N); d2y_y0.resize(N); d2y_y1.resize(N);
-        auto it=data.cbegin();
-        for (i=0;i<N;++i,++it) {
-            x=it->first;
-            std::tie(y_j0[i],y_y0[i],y_j1[i],y_y1[i])=it->second;
-            x_j0[i]=x_j1[i]=x_y0[i]=x_y1[i]=x;
-            dy_j0[i]=-y_j1[i];
-            dy_j1[i]=y_j0[i]-y_j1[i]/x;
-            dy_y0[i]=-y_y1[i];
-            dy_y1[i]=y_y0[i]-y_y1[i]/x;
-            d2y_j0[i]=y_j1[i]/x-y_j0[i];
-            d2y_j1[i]=(2/(x*x)-1)*y_j1[i]-y_j0[i]/x;
-            d2y_y0[i]=y_y1[i]/x-y_y0[i];
-            d2y_y1[i]=(2/(x*x)-1)*y_y1[i]-y_y0[i]/x;
-        }
-        if (spline_j0) delete spline_j0;
-        spline_j0=new boost::math::interpolators::quintic_hermite(std::move(x_j0),std::move(y_j0),std::move(dy_j0),std::move(d2y_j0));
-        if (spline_j1) delete spline_j1;
-        spline_j1=new boost::math::interpolators::quintic_hermite(std::move(x_j1),std::move(y_j1),std::move(dy_j1),std::move(d2y_j1));
-        if (spline_y0) delete spline_y0;
-        spline_y0=new boost::math::interpolators::quintic_hermite(std::move(x_y0),std::move(y_y0),std::move(dy_y0),std::move(d2y_y0));
-        if (spline_y1) delete spline_y1;
-        spline_y1=new boost::math::interpolators::quintic_hermite(std::move(x_y1),std::move(y_y1),std::move(dy_y1),std::move(d2y_y1));
-    }
-
-
-    Hankel1Real01Interp::Hankel1Real01Interp(Real x1,Real tol) {
-        b=x1;
-        unsigned n=150,i,N,cnt;
-        Real x,j_0,j_1,y_0,y_1,e1,e2,e3,e4,err,errmax,erravg;
-        for (i=n;i-->0;) {
-            x=b*(1.+std::cos(M_PI*(2*i+1.)/(2*n)))*.5;
-            JY_01(x,j_0,y_0,j_1,y_1);
-            data.insert(std::make_pair(x,std::make_tuple(j_0,y_0,j_1,y_1)));
-        }
-        size_t iter=0;
-        bool done;
-        do {
-            N=data.size();
-            make_splines();
-            done=true;
-            ++n;
-            errmax=erravg=0.;
-            auto dom=spline_j0->domain();
-            cnt=0;
-            for (i=0;i<n;++i) {
-                x=b*(1.+std::cos(M_PI*(2*i+1.)/(2*n)))*.5;
-                JY_01(x,j_0,y_0,j_1,y_1);
-                if (x>=dom.first && x<=dom.second) {
-                    e1=std::abs(j_0-(*spline_j0)(x))/(1.+std::abs(j_0));
-                    e2=std::abs(j_1-(*spline_j1)(x))/(1.+std::abs(j_1));
-                    e3=std::abs(y_0-(*spline_y0)(x))/(1.+std::abs(y_0));
-                    e4=std::abs(y_1-(*spline_y1)(x))/(1.+std::abs(y_1));
-                    err=std::max(e1,std::max(e2,std::max(e3,e4)));
-                    if (err>tol)
-                        done=false;
-                    if (errmax<err)
-                        errmax=err;
-                    erravg+=(e1+e2+e3+e4)*.25; ++cnt;
-                }
-                data.insert(std::make_pair(x,std::make_tuple(j_0,y_0,j_1,y_1)));
+    void H1_01(Cplx z,Cplx& h0,Cplx& h1,bool realpos) {
+        if (realpos || (z.imag()==0 && z.real()>0)) {
+            /** optimize for real z */
+            if (std::abs(z)>1e6) {
+                /** use asymptotic formulas for large argument */
+                Real r=std::sqrt(M_2_PI/z.real()),phi=z.real()-M_PI_4;
+                h0=r*(std::cos(phi)+1i*std::sin(phi));
+                phi-=M_PI_2;
+                h1=r*(std::cos(phi)+1i*std::sin(phi));
             }
-            ++iter;
-            erravg/=cnt;
-            if (erravg<tol)
-                done=true;
-            std::cout << "\rSamples: " << N << ", max./avg. error in " << n << " points: " << errmax << ", " << erravg << "     ";
-            std::flush(std::cout);
-        } while (!done);
-        make_splines();
-        std::cout << std::endl << "Iterations: " << iter << ", samples: " << data.size() << std::endl;
-    }
-
-    Hankel1Real01Interp::~Hankel1Real01Interp() {
-        if (spline_j0) delete spline_j0;
-        if (spline_j1) delete spline_j1;
-        if (spline_y0) delete spline_y0;
-        if (spline_y1) delete spline_y1;
-    }
-
-    void Hankel1Real01Interp::compute(Real x,Cplx& h0,Cplx& h1) {
-        try {
-            Real j_0=(*spline_j0)(x);
-            Real j_1=(*spline_j1)(x);
-            Real y_0=(*spline_y0)(x);
-            Real y_1=(*spline_y1)(x);
+            Real j_0,y_0,j_1,y_1;
+            JY_01(z.real(),j_0,y_0,j_1,y_1);
             h0=j_0+1i*y_0;
             h1=j_1+1i*y_1;
-        } catch (std::exception const& e) {
-           H1_01(x,h0,h1);
+        } else {
+            /** general algorithms for complex z */
+            if (std::abs(z)>1e6) {
+                /** use asymptotic formulas for large argument */
+                Cplx r=std::sqrt(M_2_PI/z);
+                h0=r*std::exp(1i*(z-M_PI_4));
+                h1=r*std::exp(1i*(z-3*M_PI_4));
+            }
+            h0=HankelH1(0,z);
+            h1=HankelH1(1,z);
         }
-    }
-
-    void Hankel1Real01Interp::compute(const RealArray& x,ComplexArray& h0,ComplexArray& h1) {
-        size_t nr=x.rows(),nc=x.cols(),i,j;
-        assert(h0.rows()==nr && h0.cols()==nc && h1.rows()==nr && h1.cols()==nc);
-        for (j=0;j<nc;++j) for (i=0;i<nr;++i)
-            compute(x(i,j),h0(i,j),h1(i,j));
     }
 
 }
-

@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
     }
 
     Eigen::initParallel();
+    Eigen::setNbThreads(1);
 
     // read filenames for obstacle and incoming wave
     string fname_scatterer = argv[1], fname_incoming = argv[2];

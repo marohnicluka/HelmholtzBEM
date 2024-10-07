@@ -54,7 +54,7 @@ std::string path = "/home/diego/Uni/Thesis/HelmholtzBEM/raw_data/hypersingular_i
 
 TEST(HypersingularTest, compare_row) {
     // compute operator and extract first row
-    builder.assembleHypersingular(k, c_i);
+    builder.assembleDense(k, c_i, LayerType::HYPERSINGULAR);
     W = builder.getHypersingular().block(0,0,1,numpanels).transpose();
     // read first row of operator from file
     fp_data.open(path);

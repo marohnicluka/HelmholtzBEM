@@ -13,24 +13,24 @@
 #include <numeric>
 
 /**
- * This Struct object is used to store a quadrature Rule.
+ * This structure is used for storing a quadrature rule.
  */
 struct QuadRule {
-    std::size_t dim;   // dimension of space
-    std::size_t n;     // number of nodes/weights
-    Eigen::MatrixXd x; // quadrature nodes (columns of a matrix with dim rows)
-    Eigen::VectorXd w; // vector of quadrature weights
+    std::size_t dim;   /** dimension of space */
+    std::size_t n;     /** number of nodes/weights */
+    Eigen::MatrixXd x; /** quadrature nodes (columns of a matrix with dim rows) */
+    Eigen::VectorXd w; /** vector of quadrature weights */
 };
 
 /**
  * Compute Gaussian quadrature nodes and weights for n nodes over
- * interval [a,b]. The nodes and weights are returned as a std pair.
+ * interval [a,b]. The nodes and weights are returned as a std::pair.
  *
- * @param a Lower end of the domain
- * @param b Upper end of the domain
- * @param n Order for the quadrature rule
- * @param eps Tolerane level for the quadrature rule
- * @return std pair object containing weights and nodes in Eigen:VectorXd
+ * @param a lower end of the domain
+ * @param b upper end of the domain
+ * @param n order for the quadrature rule
+ * @param eps tolerance level for the quadrature rule
+ * @return std::pair object containing weights and nodes in Eigen:VectorXd
  */
 inline std::pair<Eigen::RowVectorXd, Eigen::RowVectorXd>
 gauleg(double a, double b, int n, double eps = 1.e-13) {
@@ -82,9 +82,9 @@ gauleg(double a, double b, int n, double eps = 1.e-13) {
  * Compute reduced composite Gaussian quadrature nodes and weights for n*(n+1)/2-1 nodes over
  * interval [0,1]. The nodes and weights are returned as a std pair.
  *
- * @param n Order for the quadrature rule
- * @param eps Tolerane level for the quadrature rule
- * @return std pair object containing weights and nodes in Eigen:VectorXd
+ * @param n order for the quadrature rule
+ * @param eps tolerance level for the quadrature rule
+ * @return std::pair object containing weights and nodes in Eigen:VectorXd
  */
 inline std::pair<Eigen::RowVectorXd, Eigen::RowVectorXd>
         cgauleg_redux(int n, double eps){
@@ -121,31 +121,11 @@ inline std::pair<Eigen::RowVectorXd, Eigen::RowVectorXd>
 }
 
 /**
- * This functions transplants Gaussian quadrature rule
- * according to the paper "New quadrature formulas from
- * conformal maps" by Hale and Trefethen (2008).
- *
- * @param qr quadrature rule
- */
-inline void transplantGaussQR(QuadRule &qr, double a, double b) {
-  qr.x = (2. * (qr.x.array() - a) / (b - a) - 1.).matrix();
-  for (size_t i = 0; i < qr.n; ++i) {
-    double x = qr.x(i), x2 = x * x;
-    double w = qr.w(i), w2 = w * w;
-    qr.x(i) *= (((1225 * x2 + 1800) * x2 + 3024) * x2 + 6720) * x2 + 40320;
-    qr.w(i) *= (((11025 * w2 + 12600) * w2 + 15120) * w2 + 20160) * w2 + 40320;
-  }
-  qr.x /= 53089.;
-  qr.x = (a + (qr.x.array() + 1.) * (b - a) * .5).matrix();
-  qr.w /= 53089.;
-}
-
-/**
  * This function is evaluates a standard Gaussian quadrature rule for the domain
  * [a,b] for the given order. The quadrature rule is returned in the form of a
- * QuadRule object
+ * QuadRule object.
  *
- * @param N Order for Gaussian quadrature
+ * @param N order for Gaussian quadrature
  * @param a left boundary of domain
  * @param b right boundary of domain
  * @return QuadRule object containing the quadrature rule
@@ -168,9 +148,9 @@ inline QuadRule getGaussQR(unsigned N, double a, double b) {
 /**
  * This function is evaluates a composite Gaussian quadrature rule for the domain
  * [0,1] for the given order. The quadrature rule is returned in the form of a
- * QuadRule object
+ * QuadRule object.
  *
- * @param N Order for Gaussian quadrature
+ * @param N order for Gaussian quadrature
  * @return QuadRule object containing the quadrature rule
  */
 inline QuadRule getCGaussQR(unsigned N) {
@@ -184,7 +164,6 @@ inline QuadRule getCGaussQR(unsigned N) {
     gauss.n = N*(N+1)/2-1;
     gauss.x = points;
     gauss.w = weights;
-    //transplantGaussQR(gauss, 0., 1.);
     return gauss;
 }
 #endif

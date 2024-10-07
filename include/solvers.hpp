@@ -75,8 +75,8 @@ namespace tp {
         template <typename T>
         struct PairInc: std::pair<T,T> {
             T _m;
-            PairInc(T first, T second, T first_max): std::pair<T,T>(first, second) { _m=first_max; }
-            PairInc& operator++() { if (this->first+1==_m) { ++this->second; this->first=0; } else ++this->first; return *this; }
+            PairInc(T first, T second, T first_max) : std::pair<T,T>(first, second) { _m = first_max; }
+            PairInc& operator++() { if (this->first + 1 == _m) { ++this->second; this->first = 0; } else ++this->first; return *this; }
         };
 
         void A_rhs(const ParametrizedMesh &mesh,

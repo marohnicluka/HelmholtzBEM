@@ -53,7 +53,7 @@ std::string path = "/home/diego/Uni/Thesis/HelmholtzBEM/raw_data/single_layer_i_
 
 TEST(SingleLayerTest, compare_row) {
     // compute operator and extract first row
-    builder.assembleSingleLayer(k, c_i);
+    builder.assembleDense(k, c_i, LayerType::SINGLE);
     V = builder.getSingleLayer().block(0,0,1,numpanels).transpose();
     // read first row of operator from file
     fp_data.open(path);

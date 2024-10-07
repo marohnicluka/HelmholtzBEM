@@ -1,5 +1,0 @@
-add_custom_target(doxygen_HelmholtzTransmissionProblemBEM
-COMMAND O_DIRECTORY=generated_doc doxygen Doxyfile
-COMMENT "Generating HelmholtzTransmissionProblemBEM Documentation"
-WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/doxygen
-)

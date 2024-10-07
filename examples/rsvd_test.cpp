@@ -251,10 +251,7 @@ int main(int argc, char** argv) {
     std::cout << "LU decomposition time: " << randomized_svd::get_lu_time() << std::endl
               << "QR decomposition time: " << randomized_svd::get_qr_time() << std::endl
               << "Subspace iterations time: " << randomized_svd::get_sub_iter_time() << std::endl
-              << "SVD time: " << randomized_svd::get_svd_time() << std::endl
-              << "Interaction matrix assembly time: " << builder.getInteractionMatrixAssemblyTime() * 1e-6 << std::endl
-              << "Hankel computation time: " << builder.getHankelComputationTime() * 1e-6 << std::endl
-              << "Panel interaction data time: " << builder.getPanelInteractionDataTime() * 1e-6 << std::endl;
+              << "SVD time: " << randomized_svd::get_svd_time() << std::endl;
 #endif
 
     file_out.open(mfile, std::ios_base::app);

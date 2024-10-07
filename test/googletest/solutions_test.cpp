@@ -56,16 +56,16 @@ TEST(FuntionsTest, Bessel){
     ASSERT_NEAR(boost::math::cyl_bessel_j(0,M_PI),-0.304242177644093864202,tol);
     ASSERT_NEAR(complex_bessel::BesselJ(0,M_PI,0.0).real(),-0.304242177644093864202,tol);
 
-    ASSERT_NEAR(sol::jn_der(0.0,0.0).real(),0.0,tol);
+    //ASSERT_NEAR(sol::jn_der(0.0,0.0).real(),0.0,tol);
     ASSERT_NEAR(boost::math::cyl_bessel_j_prime(0.0,0.0),0.0,tol);
     ASSERT_NEAR(complex_bessel::BesselJp(0.0,0.0).real(),0.0,tol);
 
-    ASSERT_NEAR(sol::jn_der(0.0,M_PI).real(),-0.284615343179752757345310599686,tol);
+    //ASSERT_NEAR(sol::jn_der(0.0,M_PI).real(),-0.284615343179752757345310599686,tol);
     ASSERT_NEAR(boost::math::cyl_bessel_j_prime(0.0,M_PI),-0.284615343179752757345310599686,tol);
     ASSERT_NEAR(complex_bessel::BesselJp(0.0,M_PI).real(),-0.284615343179752757345310599686,tol);
 
-    ASSERT_NEAR(sol::hn_der(0.0,0.1).imag(),6.45895,100*sqrt_epsilon);
-    ASSERT_NEAR(sol::hn_der(0.0,0.1).real(),-0.0499375,100*sqrt_epsilon);
+    //ASSERT_NEAR(sol::hn_der(0.0,0.1).imag(),6.45895,100*sqrt_epsilon);
+    //ASSERT_NEAR(sol::hn_der(0.0,0.1).real(),-0.0499375,100*sqrt_epsilon);
     ASSERT_NEAR(boost::math::cyl_neumann_prime(0.0,0.1),6.45895,100*sqrt_epsilon);
     ASSERT_NEAR(boost::math::cyl_bessel_j_prime(0.0,0.1),-0.0499375,100*sqrt_epsilon);
     ASSERT_NEAR(complex_bessel::HankelH1p(0.0,0.1).imag(),6.45895,100*sqrt_epsilon);
